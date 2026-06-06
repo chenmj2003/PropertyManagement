@@ -109,23 +109,26 @@ const logout = () => {
   background-image: url('@/assets/images/adminbg.jpg');
   background-size: cover;
   background-position: center;
-  background-attachment: fixed;
 }
-.logo { height: 60px; line-height: 60px; text-align: center; color: white; background: rgba(43, 47, 58, 0.92); }
-.el-aside { background-color: rgba(48, 65, 86, 0.92) !important; }
+.logo { height: 60px; line-height: 60px; text-align: center; color: white; background: rgba(43, 47, 58, 0.88); }
+.el-aside { background-color: rgba(48, 65, 86, 0.88) !important; }
 .el-menu { background-color: transparent !important; }
 .top-header {
   height: 50px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 20px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
 }
 .header-right {
   display: flex;
   align-items: center;
 }
-.content { background: rgba(240, 242, 245, 0.75); padding: 20px; }
+.content {
+  background: transparent;
+  padding: 20px;
+}
 </style>

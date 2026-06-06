@@ -472,12 +472,11 @@ onMounted(() => {
   background-image: url('@/assets/images/ownerbg.jpg');
   background-size: cover;
   background-position: center;
-  background-attachment: fixed;
 }
 
 .sidebar {
   width: 220px;
-  background-color: rgba(48, 65, 86, 0.92);
+  background-color: rgba(48, 65, 86, 0.88);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -517,18 +516,19 @@ onMounted(() => {
 
 .main-content {
   flex: 1;
-  background-color: rgba(240, 242, 245, 0.6);
+  background: transparent;
   overflow-y: auto;
 }
 
 .top-header {
   height: 50px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding: 0 24px;
-  border-bottom: 1px solid #e4e7ed;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
   gap: 16px;
 }
 

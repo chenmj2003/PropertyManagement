@@ -1,35 +1,38 @@
 @import './base.css';
 
+/* 全局重置：让应用占满全屏 */
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* 毛玻璃卡片效果：全局应用到所有 el-card */
+.el-card {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(8px);
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+/* 表格也半透明 */
+.el-table {
+  background: rgba(255, 255, 255, 0.85) !important;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+.el-table th {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+.el-table tr {
+  background: transparent !important;
+}
+
+/* 弹窗 */
+.el-dialog {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(12px);
+}
+
+/* 页容器给一点呼吸感 */
+.page-container {
+  padding: 24px;
 }
