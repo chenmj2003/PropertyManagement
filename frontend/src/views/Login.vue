@@ -21,7 +21,7 @@
       </div>
 
       <!-- 登录表单 -->
-      <el-form v-if="mode === 'login'" :model="loginForm" :rules="loginRules" ref="loginFormRef" label-width="0">
+      <el-form v-if="mode === 'login'" :model="loginForm" :rules="loginRules" ref="loginFormRef" label-width="0" @keyup.enter="handleLogin">
         <el-form-item prop="account">
           <el-input v-model="loginForm.account" placeholder="请输入账号" size="large" />
         </el-form-item>
@@ -38,7 +38,7 @@
       </el-form>
 
       <!-- 注册表单 -->
-      <el-form v-if="mode === 'register'" :model="registerForm" :rules="registerRules" ref="registerFormRef" label-width="80px">
+      <el-form v-if="mode === 'register'" :model="registerForm" :rules="registerRules" ref="registerFormRef" label-width="80px" @keyup.enter="handleRegister">
         <el-form-item label="姓名" prop="name">
           <el-input v-model="registerForm.name" />
         </el-form-item>
@@ -82,7 +82,7 @@
       </el-form>
 
       <!-- 忘记密码表单 -->
-      <el-form v-if="mode === 'reset'" :model="resetForm" :rules="resetRules" ref="resetFormRef" label-width="80px">
+      <el-form v-if="mode === 'reset'" :model="resetForm" :rules="resetRules" ref="resetFormRef" label-width="80px" @keyup.enter="handleReset">
         <el-form-item label="账号" prop="account">
           <el-input v-model="resetForm.account" />
         </el-form-item>

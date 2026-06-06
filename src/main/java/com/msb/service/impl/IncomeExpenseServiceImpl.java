@@ -1,6 +1,8 @@
 package com.msb.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.msb.mapper.IncomeExpenseMapper;
 import com.msb.mapper.ParkingSpotApplicationMapper;
@@ -48,6 +50,17 @@ public class IncomeExpenseServiceImpl
      * 3. 车位购买已支付（parking_spot_application 表 status='paid'）
      * 系统生成的记录使用负数 ID，前端据此禁用编辑/删除
      */
+    /** ✨分页✨ 分页查询收支（只查手动记账，系统记录已合并到listByType中） */
+    @Override
+    public IPage<IncomeExpense> pageByType(String type, int page, int pageSize) {
+        // 分页只用于手动记账表
+        QueryWrapper<IncomeExpense> wrapper = new QueryWrapper<>();
+        if (type != null && !type.isEmpty()) wrapper.eq("type", type);
+        wrapper.orderByDesc("record_date").orderByDesc("create_time");
+        // 先查总数用于合并计算
+        return page(new Page<>(page, pageSize), wrapper);
+    }
+
     @Override
     public List<IncomeExpense> listByType(String type) {
         boolean wantIncome = type == null || type.isEmpty() || "income".equals(type);

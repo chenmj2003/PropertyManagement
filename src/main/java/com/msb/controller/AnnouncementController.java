@@ -1,5 +1,6 @@
 package com.msb.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
 import com.msb.pojo.Announcement;
 import com.msb.service.AnnouncementService;
@@ -28,12 +29,15 @@ public class AnnouncementController {
      * GET /api/owner/announcements
      */
     @GetMapping("/owner/announcements")
-    public Result<List<Announcement>> ownerList(HttpServletRequest request) {
+    public Result<IPage<Announcement>> ownerList(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
         String userType = (String) request.getAttribute("userType");
         if (!"owner".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        return Result.success(announcementService.listAll());
+        return Result.success(announcementService.pageAll(page, pageSize));
     }
 
     // ==================== 管理员端 ====================
@@ -43,12 +47,15 @@ public class AnnouncementController {
      * GET /api/admin/announcements
      */
     @GetMapping("/admin/announcements")
-    public Result<List<Announcement>> adminList(HttpServletRequest request) {
+    public Result<IPage<Announcement>> adminList(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
         String userType = (String) request.getAttribute("userType");
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        return Result.success(announcementService.listAll());
+        return Result.success(announcementService.pageAll(page, pageSize));
     }
 
     /**

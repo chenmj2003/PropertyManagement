@@ -1,6 +1,8 @@
 package com.msb.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.msb.mapper.OwnerMapper;
 import com.msb.mapper.RepairRequestMapper;
@@ -75,6 +77,24 @@ public class RepairRequestServiceImpl
         return list(new QueryWrapper<RepairRequest>()
                 .orderByAsc("status")
                 .orderByDesc("create_time"));
+    }
+
+    /** ✨分页✨ 管理员分页查报修，支持按状态筛选 */
+    @Override
+    public IPage<RepairRequest> pageAllRepairs(int page, int pageSize, String status) {
+        QueryWrapper<RepairRequest> wrapper = new QueryWrapper<>();
+        if (status != null && !status.isEmpty()) wrapper.eq("status", status);
+        wrapper.orderByAsc("status").orderByDesc("create_time");
+        return page(new Page<>(page, pageSize), wrapper);
+    }
+
+    /** ✨分页✨ 业主分页查报修 */
+    @Override
+    public IPage<RepairRequest> pageByOwnerId(Integer ownerId, int page, int pageSize) {
+        return page(new Page<>(page, pageSize),
+                new QueryWrapper<RepairRequest>()
+                        .eq("owner_id", ownerId)
+                        .orderByDesc("create_time"));
     }
 
     /**

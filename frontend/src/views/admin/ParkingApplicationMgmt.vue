@@ -64,6 +64,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="total" @current-change="loadData" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
     </el-card>
   </div>
 </template>
@@ -77,6 +78,7 @@ const applications = ref([])
 const loading = ref(false)
 const operatingId = ref(null)
 const operateType = ref('')
+const currentPage = ref(1); const pageSize = ref(10); const total = ref(0)
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('token')
@@ -86,15 +88,16 @@ const getHeaders = () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/admin/parking/applications', getHeaders())
+    const res = await axios.get('/api/admin/parking/applications', {
+      ...getHeaders(),
+      params: { page: currentPage.value, pageSize: pageSize.value }
+    })
     if (res.data.code === 200) {
-      applications.value = res.data.data
-    } else {
-      ElMessage.error(res.data.msg || '获取申请列表失败')
-    }
-  } catch (e) {
-    ElMessage.error('获取申请列表失败')
-  } finally {
+      applications.value = res.data.data.records || []
+      total.value = res.data.data.total || 0
+    } else { ElMessage.error(res.data.msg || '获取申请列表失败') }
+  } catch (e) { ElMessage.error('获取申请列表失败') }
+  finally {
     loading.value = false
   }
 }

@@ -27,7 +27,7 @@
       </div>
 
       <!-- 表格 -->
-      <el-table :data="tableData" border stripe style="width: 100%; margin-top: 20px">
+      <el-table :data="pagedData" border stripe style="width: 100%; margin-top: 20px">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="gender" label="性别" width="60" />
@@ -37,18 +37,22 @@
         <el-table-column prop="buildingName" label="楼栋" width="100" />
         <el-table-column prop="roomNumber" label="房间号" width="100" />
       </el-table>
+      <el-pagination v-if="filteredData.length > pageSize" v-model:current-page="currentPage" :page-size="pageSize" :total="filteredData.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+// computed needed for pagedData + search filter
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 
-const tableData = ref([])
+const tableData = ref([]); const filteredData = ref([])
 const searchName = ref('')
+const currentPage = ref(1); const pageSize = ref(10)
+const pagedData = computed(() => filteredData.value.slice((currentPage.value-1)*pageSize.value, currentPage.value*pageSize.value))
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('token')
@@ -60,10 +64,8 @@ const loadData = async () => {
     const res = await axios.get('/api/admin/owners', getHeaders())
     if (res.data.code === 200) {
       let data = res.data.data
-      if (searchName.value) {
-        data = data.filter(item => item.name.includes(searchName.value))
-      }
-      tableData.value = data
+      if (searchName.value) data = data.filter(item => item.name.includes(searchName.value))
+      tableData.value = data; filteredData.value = data; currentPage.value = 1
     }
   } catch (error) {
     ElMessage.error('获取业主列表失败')

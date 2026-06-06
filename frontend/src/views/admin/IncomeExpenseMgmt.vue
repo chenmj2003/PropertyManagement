@@ -80,6 +80,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="total" @current-change="(p) => { currentPage = p; list = allData.value.slice((p-1)*pageSize, p*pageSize) }" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
       <el-empty v-if="list.length === 0 && !loading" description="暂无收支记录" />
     </el-card>
 
@@ -128,11 +129,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-const list = ref([])
+const list = ref([]); const allData = ref([])
+const currentPage = ref(1); const pageSize = ref(10); const total = ref(0)
 const stats = ref({})
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -153,7 +155,12 @@ const loadData = async () => {
   try {
     const params = filter.value ? { type: filter.value } : {}
     const res = await axios.get('/api/admin/income-expenses', { ...getHeaders(), params })
-    if (res.data.code === 200) list.value = res.data.data || []
+    if (res.data.code === 200) {
+      // 服务端返回合并后的全部数据（手动+系统），前端分页
+      allData.value = res.data.data.records || res.data.data || []
+      total.value = allData.value.length
+      list.value = allData.value.slice((currentPage.value-1)*pageSize.value, currentPage.value*pageSize.value)
+    }
   } catch (e) { ElMessage.error('获取数据失败') }
   finally { loading.value = false }
 }

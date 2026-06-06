@@ -37,7 +37,7 @@
 
     <!-- 数据表格 -->
     <el-card shadow="never" style="margin-top: 16px;">
-      <el-table :data="list" border stripe v-loading="loading">
+      <el-table :data="pagedList" border stripe v-loading="loading">
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="ownerName" label="业主" width="100" />
         <el-table-column prop="roomNumber" label="房间号" width="100" />
@@ -60,6 +60,7 @@
         </el-table-column>
         <el-table-column prop="description" label="备注" min-width="150" show-overflow-tooltip />
       </el-table>
+      <el-pagination v-if="list.length > pageSize" v-model:current-page="currentPage" :page-size="pageSize" :total="list.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
     </el-card>
 
     <!-- 发送通知弹窗 -->
@@ -114,12 +115,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+// computed for client-side pagination
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 
-const list = ref([])
+const list = ref([]); const allData = ref([])
+const currentPage = ref(1); const pageSize = ref(10)
+const pagedList = computed(() => allData.value.slice((currentPage.value-1)*pageSize.value, currentPage.value*pageSize.value))
 const ownerList = ref([])
 const loading = ref(false)
 const sending = ref(false)
@@ -150,7 +154,7 @@ const loadData = async () => {
 
     const res = await axios.get('/api/admin/paymentNotifications', { ...getHeaders(), params })
     if (res.data.code === 200) {
-      list.value = res.data.data || []
+      list.value = res.data.data || []; allData.value = list.value; currentPage.value = 1
     } else {
       ElMessage.error(res.data.msg || '查询失败')
     }

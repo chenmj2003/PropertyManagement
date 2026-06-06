@@ -43,6 +43,26 @@ public class OwnerController {
     }
 
     /**
+     * ✨新建✨ 更新头像
+     */
+    @PutMapping("/avatar")
+    public Result updateAvatar(@RequestHeader("token") String token,
+                                @RequestBody Map<String, String> params) {
+        LoginToken loginToken = tokenMapper.selectByToken(token);
+        if (loginToken == null) {
+            return Result.fail(401, "请重新登录");
+        }
+        String avatar = params.get("avatar");
+        if (avatar == null || avatar.isEmpty()) {
+            return Result.fail(400, "请提供头像路径");
+        }
+        Owner owner = ownerService.getOwnerById(loginToken.getUserId());
+        owner.setAvatar(avatar);
+        ownerService.updateOwner(owner);
+        return Result.success("头像更新成功", null);
+    }
+
+    /**
      * ✨新建✨ 修改密码
      */
     @PutMapping("/password")

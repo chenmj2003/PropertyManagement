@@ -39,7 +39,7 @@
 
       <el-tab-pane label="我的申请记录" name="myApplications">
         <el-table
-          :data="myApplications"
+          :data="pagedApps"
           border
           stripe
           v-loading="applicationsLoading"
@@ -82,6 +82,7 @@
             </template>
           </el-table-column>
         </el-table>
+        <el-pagination v-if="myApplications.length > appPageSize" v-model:current-page="appPage" :page-size="appPageSize" :total="myApplications.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
       </el-tab-pane>
 
       <el-tab-pane label="已购车位" name="purchased">
@@ -111,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -122,6 +123,8 @@ const myApplications = ref([])
 const purchasedSpots = ref([])
 const spotsLoading = ref(false)
 const applicationsLoading = ref(false)
+const appPage = ref(1); const appPageSize = ref(10)
+const pagedApps = computed(() => myApplications.value.slice((appPage.value-1)*appPageSize.value, appPage.value*appPageSize.value))
 const purchasedLoading = ref(false)
 const applyingId = ref(null)
 const payingId = ref(null)

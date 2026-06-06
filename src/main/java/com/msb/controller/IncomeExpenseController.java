@@ -1,5 +1,6 @@
 package com.msb.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
 import com.msb.pojo.IncomeExpense;
 import com.msb.service.IncomeExpenseService;
@@ -29,13 +30,10 @@ public class IncomeExpenseController {
     public Result<List<IncomeExpense>> list(
             @RequestParam(required = false) String type,
             HttpServletRequest request) {
-        // 校验管理员权限
         String userType = (String) request.getAttribute("userType");
-        if (!"admin".equals(userType)) {
-            return Result.fail(403, "权限不足");
-        }
-        List<IncomeExpense> list = incomeExpenseService.listByType(type);
-        return Result.success(list);
+        if (!"admin".equals(userType)) return Result.fail(403, "权限不足");
+        // 返回合并后的全部数据（手动记账+系统缴费+车位收入），前端分页
+        return Result.success(incomeExpenseService.listByType(type));
     }
 
     /**

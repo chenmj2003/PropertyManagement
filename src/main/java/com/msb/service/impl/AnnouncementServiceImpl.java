@@ -1,6 +1,8 @@
 package com.msb.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.msb.mapper.AnnouncementMapper;
 import com.msb.pojo.Announcement;
@@ -25,6 +27,13 @@ public class AnnouncementServiceImpl
     public List<Announcement> listAll() {
         return list(new QueryWrapper<Announcement>()
                 .orderByDesc("create_time"));
+    }
+
+    /** ✨新建✨ 分页查询 */
+    @Override
+    public IPage<Announcement> pageAll(Integer page, Integer pageSize) {
+        return page(new Page<>(page, pageSize),
+                new QueryWrapper<Announcement>().orderByDesc("create_time"));
     }
 
     /**

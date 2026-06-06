@@ -1,6 +1,8 @@
 package com.msb.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.msb.common.Result;
 import com.msb.pojo.ParkingSpotApplication;
 import com.msb.service.ParkingSpotApplicationService;
@@ -18,12 +20,12 @@ public class AdminParkingApplicationController {
 
     // 管理员查看所有申请
     @GetMapping("/applications")
-    public Result<List<ParkingSpotApplication>> getAllApplications(){
-        List<ParkingSpotApplication> list = applicationService.list(
+    public Result<IPage<ParkingSpotApplication>> getAllApplications(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(applicationService.page(new Page<>(page, pageSize),
                 new LambdaQueryWrapper<ParkingSpotApplication>()
-                        .orderByDesc(ParkingSpotApplication::getApplyTime)
-        );
-        return Result.success(list);
+                        .orderByDesc(ParkingSpotApplication::getApplyTime)));
     }
     // 审核通过
     @PutMapping("/approve/{applicationId}")

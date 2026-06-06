@@ -34,7 +34,7 @@ public interface VehicleMapper extends BaseMapper<Vehicle> {
             "    OR v.owner_name LIKE CONCAT('%', #{keyword}, '%'))" +
             "  </if>" +
             "</where>" +
-            "ORDER BY v.id DESC" +
+            "ORDER BY v.id ASC" +
             "</script>")
     List<Vehicle> selectAllWithSearch(@Param("keyword") String keyWord);
 }

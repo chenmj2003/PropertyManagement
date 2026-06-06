@@ -18,5 +18,6 @@ public class ParkingSpot {
     private String status;
     // 车位售价
     private Double price;
+    private String image;      // ✨新建✨ 车位图片路径
     private LocalDateTime createTime;
 }

@@ -20,6 +20,7 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="total" @current-change="loadData" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
       <el-empty v-if="list.length === 0 && !loading" description="暂无公告" />
     </el-card>
 
@@ -46,6 +47,7 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const list = ref([])
+const currentPage = ref(1); const pageSize = ref(10); const total = ref(0)
 const loading = ref(false)
 const dialogVisible = ref(false)
 const submitting = ref(false)
@@ -61,8 +63,14 @@ const getHeaders = () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/admin/announcements', getHeaders())
-    if (res.data.code === 200) list.value = res.data.data || []
+    const res = await axios.get('/api/admin/announcements', {
+      ...getHeaders(),
+      params: { page: currentPage.value, pageSize: pageSize.value }
+    })
+    if (res.data.code === 200) {
+      list.value = res.data.data.records || []
+      total.value = res.data.data.total || 0
+    }
   } catch (e) { ElMessage.error('获取公告失败') }
   finally { loading.value = false }
 }

@@ -1,5 +1,6 @@
 package com.msb.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
 import com.msb.pojo.RepairRequest;
 import com.msb.service.RepairRequestService;
@@ -52,16 +53,14 @@ public class RepairRequestController {
      * GET /api/owner/repairs
      */
     @GetMapping("/owner/repairs")
-    public Result<List<RepairRequest>> getMyRepairs(HttpServletRequest request) {
+    public Result<IPage<RepairRequest>> getMyRepairs(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest request) {
         Integer userId = (Integer) request.getAttribute("userId");
         String userType = (String) request.getAttribute("userType");
-
-        if (!"owner".equals(userType)) {
-            return Result.fail(403, "权限不足");
-        }
-
-        List<RepairRequest> list = repairRequestService.getByOwnerId(userId);
-        return Result.success(list);
+        if (!"owner".equals(userType)) return Result.fail(403, "权限不足");
+        return Result.success(repairRequestService.pageByOwnerId(userId, page, pageSize));
     }
 
     // ==================== 管理员端 ====================
@@ -71,15 +70,14 @@ public class RepairRequestController {
      * GET /api/admin/repairs
      */
     @GetMapping("/admin/repairs")
-    public Result<List<RepairRequest>> getAllRepairs(HttpServletRequest request) {
+    public Result<IPage<RepairRequest>> getAllRepairs(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String status,
+            HttpServletRequest request) {
         String userType = (String) request.getAttribute("userType");
-
-        if (!"admin".equals(userType)) {
-            return Result.fail(403, "权限不足，仅管理员可查看");
-        }
-
-        List<RepairRequest> list = repairRequestService.getAllRepairs();
-        return Result.success(list);
+        if (!"admin".equals(userType)) return Result.fail(403, "权限不足");
+        return Result.success(repairRequestService.pageAllRepairs(page, pageSize, status));
     }
 
     /**

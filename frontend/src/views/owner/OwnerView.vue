@@ -68,6 +68,20 @@
         </div>
 
         <el-card class="info-card" shadow="never">
+          <!-- 头像区域 -->
+          <div class="avatar-section">
+            <div class="avatar-wrapper" @click="triggerUpload">
+              <img v-if="formData.avatar" :src="formData.avatar" class="avatar-img" />
+              <el-icon v-else :size="40" color="#c0c4cc" class="avatar-placeholder"><User /></el-icon>
+              <div class="avatar-overlay">
+                <el-icon :size="20"><Camera /></el-icon>
+                <span>更换头像</span>
+              </div>
+            </div>
+            <p class="avatar-name">{{ formData.name || '业主' }}</p>
+            <input type="file" ref="fileInput" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+          </div>
+
           <template v-if="!isEditing">
             <el-form :model="formData" label-width="80px">
               <el-form-item label="姓名">
@@ -172,7 +186,7 @@
         </div>
 
         <el-card shadow="never">
-          <el-table :data="vehicleList" border stripe v-loading="vehicleLoading">
+          <el-table :data="pagedVehicles" border stripe v-loading="vehicleLoading">
             <el-table-column type="index" label="序号" width="60" />
             <el-table-column prop="plateNumber" label="车牌号" width="120" />
             <el-table-column prop="brand" label="品牌" width="100" />
@@ -187,6 +201,7 @@
               </template>
             </el-table-column>
           </el-table>
+        <el-pagination v-if="vehicleList.length > vehiclePageSize" v-model:current-page="vehiclePage" :page-size="vehiclePageSize" :total="vehicleList.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
         </el-card>
 
         <!-- 添加/编辑弹窗 -->
@@ -238,7 +253,8 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { User, Van, Money, Shop, Tools, Bell } from '@element-plus/icons-vue'
+// computed already imported, adding pagination state below
+import { User, Van, Money, Shop, Tools, Bell, Camera } from '@element-plus/icons-vue'
 import OwnerParking from './OwnerParking.vue'
 import OwnerPayment from './OwnerPayment.vue'
 import OwnerRepair from './OwnerRepair.vue'
@@ -268,6 +284,29 @@ const formData = reactive({
 })
 const originalData = reactive({})
 const formRef = ref(null)
+const fileInput = ref(null)
+const triggerUpload = () => fileInput.value?.click()
+
+const handleAvatarUpload = async (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const formDataUpload = new FormData()
+  formDataUpload.append('file', file)
+  try {
+    const token = sessionStorage.getItem('token')
+    const res = await axios.post('/api/upload', formDataUpload, {
+      headers: { token }
+    })
+    if (res.data.code === 200) {
+      const url = res.data.data.url
+      formData.avatar = url
+      await axios.put('/api/owner/avatar', { avatar: url }, getHeaders())
+      ElMessage.success('头像更新成功')
+    } else {
+      ElMessage.error(res.data.msg || '上传失败')
+    }
+  } catch (e) { ElMessage.error('上传失败') }
+}
 
 const rules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
@@ -283,6 +322,8 @@ const rules = {
 // ========== 车辆相关 ==========
 const vehicleList = ref([])
 const vehicleLoading = ref(false)
+const vehiclePage = ref(1); const vehiclePageSize = ref(10)
+const pagedVehicles = computed(() => vehicleList.value.slice((vehiclePage.value-1)*vehiclePageSize.value, vehiclePage.value*vehiclePageSize.value))
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const isEdit = ref(false)
@@ -599,5 +640,62 @@ onMounted(() => {
 .info-card {
   max-width: 500px;
   margin: 0 auto;
+}
+
+/* 头像 */
+.avatar-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,.15);
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-placeholder {
+  font-size: 40px;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .3s;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
 }
 </style>

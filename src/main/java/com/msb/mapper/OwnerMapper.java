@@ -14,6 +14,6 @@ public interface OwnerMapper extends BaseMapper<Owner> {
             "b.building_num AS buildingName, o.room_number AS roomNumber " +
             "FROM owner o " +
             "LEFT JOIN building b ON o.building_id = b.id " +
-            "ORDER BY o.id DESC")
+            "ORDER BY o.id ASC")
     List<OwnerVo> selectAllOwners();
 }

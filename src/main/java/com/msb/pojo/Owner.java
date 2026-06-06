@@ -17,4 +17,5 @@ public class Owner {
     private String phone;
     private Integer buildingId;
     private String roomNumber;
+    private String avatar;     // ✨新建✨ 头像路径
 }

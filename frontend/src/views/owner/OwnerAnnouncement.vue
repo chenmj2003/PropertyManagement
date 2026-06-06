@@ -28,6 +28,7 @@ import { ElMessage } from 'element-plus'
 
 const list = ref([])
 const loading = ref(false)
+const currentPage = ref(1); const pageSize = ref(10); const total = ref(0)
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('token')
@@ -37,8 +38,13 @@ const getHeaders = () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/owner/announcements', getHeaders())
-    if (res.data.code === 200) list.value = res.data.data || []
+    const res = await axios.get('/api/owner/announcements', {
+      ...getHeaders(), params: { page: currentPage.value, pageSize: pageSize.value }
+    })
+    if (res.data.code === 200) {
+      list.value = res.data.data.records || []
+      total.value = res.data.data.total || 0
+    }
   } catch (e) { ElMessage.error('获取公告失败') }
   finally { loading.value = false }
 }

@@ -22,7 +22,7 @@ public class OwnerServiceImpl implements OwnerService {
     @Override
     public List<OwnerVo> selectAllOwner() {
         QueryWrapper<OwnerVo> wrapper = new QueryWrapper<>();
-        wrapper.orderByDesc("id");
+        wrapper.orderByAsc("id");
         return ownerMapper.selectAllOwners();
     }
 

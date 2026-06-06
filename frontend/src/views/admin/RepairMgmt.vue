@@ -11,7 +11,7 @@
     </div>
 
     <el-card shadow="never">
-      <el-table :data="filteredList" border stripe v-loading="loading">
+      <el-table :data="list" border stripe v-loading="loading">
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="ownerName" label="报修人" width="100" />
         <el-table-column prop="roomNumber" label="房间号" width="100" />
@@ -33,19 +33,21 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="filteredList.length === 0 && !loading" description="暂无报修记录" />
+      <el-pagination v-model:current-page="currentPage" :page-size="pageSize" :total="total" @current-change="loadData" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
+      <el-empty v-if="list.length === 0 && !loading" description="暂无报修记录" />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const list = ref([])
 const loading = ref(false)
 const filter = ref('all')
+const currentPage = ref(1); const pageSize = ref(10); const total = ref(0)
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('token')
@@ -55,19 +57,16 @@ const getHeaders = () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/admin/repairs', getHeaders())
-    if (res.data.code === 200) list.value = res.data.data || []
-  } catch (e) {
-    ElMessage.error('获取报修列表失败')
-  } finally {
-    loading.value = false
-  }
+    const params = { page: currentPage.value, pageSize: pageSize.value }
+    if (filter.value !== 'all') params.status = filter.value
+    const res = await axios.get('/api/admin/repairs', { ...getHeaders(), params })
+    if (res.data.code === 200) {
+      list.value = res.data.data.records || []
+      total.value = res.data.data.total || 0
+    }
+  } catch (e) { ElMessage.error('获取报修列表失败') }
+  finally { loading.value = false }
 }
-
-const filteredList = computed(() => {
-  if (filter.value === 'all') return list.value
-  return list.value.filter(item => item.status === filter.value)
-})
 
 const handleProcess = (row) => {
   ElMessageBox.confirm(`确定开始处理「${row.title}」吗？`, '确认', { type: 'info' }).then(async () => {

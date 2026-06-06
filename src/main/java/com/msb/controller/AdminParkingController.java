@@ -1,5 +1,6 @@
 package com.msb.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
 import com.msb.pojo.Building;
 import com.msb.pojo.ParkingSpot;
@@ -23,9 +24,11 @@ public class AdminParkingController {
     }
 
     @GetMapping("/spots")
-    public Result listSpots(@RequestParam(required = false) Long buildingId){
-        List<ParkingSpot> parkingSpots = parkSpotService.listByBuilding(buildingId);
-        return Result.success(parkingSpots);
+    public Result<IPage<ParkingSpot>> listSpots(
+            @RequestParam(required = false) Long buildingId,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(parkSpotService.pageByBuilding(buildingId, page, pageSize));
     }
 
 }

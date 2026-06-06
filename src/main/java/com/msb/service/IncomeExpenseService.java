@@ -1,5 +1,6 @@
 package com.msb.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.pojo.IncomeExpense;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface IncomeExpenseService {
 
     /** 查询收支列表，可选按类型筛选 */
     List<IncomeExpense> listByType(String type);
+    /** ✨分页✨ 分页查询收支 */
+    IPage<IncomeExpense> pageByType(String type, int page, int pageSize);
 
     /** 新增收支记录 */
     void add(IncomeExpense record);

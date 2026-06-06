@@ -26,7 +26,7 @@
       </div>
 
       <el-table
-        :data="tableData"
+        :data="pagedData"
         border
         stripe
         v-loading="loading"
@@ -46,19 +46,23 @@
           </template>
         </el-table-column>
       </el-table>
+      <el-pagination v-if="filteredData.length > pageSize" v-model:current-page="currentPage" :page-size="pageSize" :total="filteredData.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+// computed for client-side pagination
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 
-const tableData = ref([])
+const tableData = ref([]); const filteredData = ref([])
 const loading = ref(false)
 const keyword = ref('')
+const currentPage = ref(1); const pageSize = ref(10)
+const pagedData = computed(() => filteredData.value.slice((currentPage.value-1)*pageSize.value, currentPage.value*pageSize.value))
 
 const getHeaders = () => {
   const token = sessionStorage.getItem('token')
@@ -73,7 +77,7 @@ const loadData = async () => {
       params: { keyword: keyword.value }
     })
     if (res.data.code === 200) {
-      tableData.value = res.data.data
+      tableData.value = res.data.data; filteredData.value = res.data.data
     }
   } catch (error) {
     ElMessage.error('获取车辆列表失败')
