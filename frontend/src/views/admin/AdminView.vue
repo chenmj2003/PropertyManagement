@@ -19,6 +19,10 @@
           <el-icon><DataBoard /></el-icon>
           <span>首页</span>
         </el-menu-item>
+        <el-menu-item index="/admin/announcements">
+          <el-icon><Bell /></el-icon>
+          <span>公告管理</span>
+        </el-menu-item>
         <el-menu-item index="/admin/parking">
           <el-icon><Van /></el-icon>
           <span>车位信息</span>

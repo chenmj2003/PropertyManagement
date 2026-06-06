@@ -4,6 +4,7 @@ import Login from '@/views/Login.vue'
 const OwnerView = () => import('@/views/owner/OwnerView.vue')
 const AdminView = () => import('@/views/admin/AdminView.vue')
 const AdminDashboard = () => import('@/views/admin/AdminDashboard.vue')
+const AnnouncementMgmt = () => import('@/views/admin/AnnouncementMgmt.vue')
 const AdminParkingMgmt = () => import('@/views/admin/ParkingSpotMgmt.vue')
 const OwnerList = () => import('@/views/admin/OwnerList.vue')
 const VehicleMgmt = () => import('@/views/admin/VehicleMgmt.vue')
@@ -29,6 +30,7 @@ const routes = [
     redirect: '/admin/dashboard',
     children: [
       { path: 'dashboard', name: 'AdminDashboard', component: AdminDashboard },
+      { path: 'announcements', name: 'AdminAnnouncements', component: AnnouncementMgmt },
       { path: 'parking', name: 'AdminParking', component: AdminParkingMgmt },
       { path: 'owners', name: 'AdminOwners', component: OwnerList },
       { path: 'vehicles', name: 'AdminVehicles', component: VehicleMgmt },

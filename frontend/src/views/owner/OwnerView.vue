@@ -21,6 +21,14 @@
       </div>
       <div
         class="sidebar-item"
+        :class="{ active: currentMenu === 'announcement' }"
+        @click="currentMenu = 'announcement'"
+      >
+        <el-icon><Bell /></el-icon>
+        <span>社区公告</span>
+      </div>
+      <div
+        class="sidebar-item"
         :class="{ active: currentMenu === 'payment' }"
         @click="currentMenu = 'payment'"
       >
@@ -124,6 +132,10 @@
         </el-card>
       </div>
 
+      <!-- 社区公告页 -->
+      <div v-if="currentMenu === 'announcement'" class="page-container">
+        <OwnerAnnouncement />
+      </div>
       <!-- 缴费通知页 -->
       <div v-if="currentMenu === 'payment'" class="page-container">
         <OwnerPayment />
@@ -209,10 +221,11 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { User, Van, Money, Shop, Tools } from '@element-plus/icons-vue'
+import { User, Van, Money, Shop, Tools, Bell } from '@element-plus/icons-vue'
 import OwnerParking from './OwnerParking.vue'
 import OwnerPayment from './OwnerPayment.vue'
 import OwnerRepair from './OwnerRepair.vue'
+import OwnerAnnouncement from './OwnerAnnouncement.vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
