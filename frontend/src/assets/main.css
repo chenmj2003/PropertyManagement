@@ -1,38 +1,254 @@
 @import './base.css';
 
-/* 全局重置：让应用占满全屏 */
+/* ============================================
+   全局美化 — 字体 / 表格 / 卡片 / 按钮
+   ============================================ */
+
+/* 应用容器 */
 #app {
   max-width: none;
   margin: 0;
   padding: 0;
 }
 
-/* 毛玻璃卡片效果：全局应用到所有 el-card */
+/* ==================== 全局字体 ==================== */
+body, .el-table, .el-card, .el-form, .el-button, .el-input__inner, .el-tag {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+}
+
+/* ==================== 卡片 ==================== */
 .el-card {
-  background: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(8px);
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
 }
 
-/* 表格也半透明 */
+/* 卡片标题 */
+.el-card__header {
+  font-weight: 600;
+  font-size: 15px;
+  color: #303133;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+}
+
+/* ==================== 表格 ==================== */
 .el-table {
-  background: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  border: 1px solid #ebeef5;
 }
 
-.el-table th {
-  background: rgba(255, 255, 255, 0.9) !important;
+/* 表头 — 深色渐变 */
+.el-table th.el-table__cell {
+  background: linear-gradient(180deg, #2c3e50, #34495e) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: .5px;
+  padding: 14px 0;
+  text-align: center;
+  border: none !important;
 }
 
-.el-table tr {
-  background: transparent !important;
+/* 表体单元格 */
+.el-table td.el-table__cell {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f2f5;
+  color: #333;
+  text-align: center;
 }
 
-/* 弹窗 */
+/* 斑马纹 — 浅蓝交替 */
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell {
+  background: rgba(240, 245, 255, 0.5) !important;
+}
+
+/* 行悬停 — 淡蓝高亮 + 左移 */
+.el-table .el-table__body tr:hover > td.el-table__cell {
+  background: rgba(64, 158, 255, 0.08) !important;
+  border-left: 3px solid #409eff;
+  transition: all 0.15s;
+}
+
+/* 固定列阴影 */
+.el-table__fixed-right::before {
+  background: linear-gradient(270deg, rgba(0,0,0,.06), transparent);
+}
+
+/* ==================== 表格内标签颜色丰富化 ==================== */
+
+/* 状态标签 — 已支付/已完成/已缴费 = 绿色 */
+.el-tag--success,
+.el-tag[style*="success"] {
+  background: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  border-color: #c8e6c9 !important;
+}
+
+/* 状态标签 — 待处理/待缴费 = 橙红 */
+.el-tag--danger,
+.el-tag[style*="danger"] {
+  background: #fef0f0 !important;
+  color: #d32f2f !important;
+  border-color: #ffcdd2 !important;
+}
+
+/* 状态标签 — 处理中 = 橙黄 */
+.el-tag--warning {
+  background: #fff8e1 !important;
+  color: #f57c00 !important;
+  border-color: #ffe0b2 !important;
+}
+
+/* ==================== 按钮 ==================== */
+.el-button {
+  font-weight: 500;
+  letter-spacing: .5px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.el-button--primary {
+  background: linear-gradient(135deg, #409eff, #3a7bd5);
+  border: none;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.25);
+}
+
+.el-button--primary:hover {
+  background: linear-gradient(135deg, #5cadff, #409eff);
+  box-shadow: 0 4px 14px rgba(64, 158, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.el-button--danger {
+  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.2);
+}
+
+.el-button--success {
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.2);
+}
+
+/* 小按钮/链接按钮 */
+.el-button--small.is-link {
+  font-weight: 500;
+}
+
+/* ==================== 输入框 ==================== */
+.el-input__wrapper {
+  border-radius: 8px !important;
+  box-shadow: 0 0 0 1px #e4e7ed inset;
+  transition: all 0.25s;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px #c0c4cc inset;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2) inset, 0 0 0 1px #409eff inset !important;
+}
+
+/* ==================== 弹窗 ==================== */
 .el-dialog {
   background: rgba(255, 255, 255, 0.95) !important;
   backdrop-filter: blur(12px);
+  border-radius: 16px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2) !important;
+  overflow: hidden;
 }
 
-/* 页容器给一点呼吸感 */
-.page-container {
-  padding: 24px;
+.el-dialog__header {
+  background: linear-gradient(135deg, #f8f9fc, #eef1f6);
+  padding: 18px 24px;
+  font-weight: 600;
+  font-size: 17px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+/* ==================== 页标题（左侧蓝色竖条） ==================== */
+.page-container h2,
+.header-bar h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a2e;
+  position: relative;
+  padding-left: 14px;
+}
+
+.page-container h2::before,
+.header-bar h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(180deg, #409eff, #3a7bd5);
+  border-radius: 2px;
+}
+
+/* ==================== 统计卡片（仪表盘/收支） ==================== */
+.stat-card {
+  text-align: center;
+  border-radius: 14px !important;
+  transition: transform 0.25s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0,0,0,.12) !important;
+}
+
+/* ==================== 弹窗按钮 ==================== */
+.el-dialog__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* ==================== 消息提示 ==================== */
+.el-message {
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.1);
+}
+
+/* ==================== 确认弹窗 ==================== */
+.el-message-box {
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* ==================== 空状态 ==================== */
+.el-empty__image {
+  opacity: .6;
+}
+
+/* ==================== 分页 ==================== */
+.el-pagination {
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.el-pager li {
+  border-radius: 6px;
+}
+
+.el-pager li.active {
+  background: #409eff !important;
+}
+
+/* ==================== 单选框组 ==================== */
+.el-radio-button__inner {
+  border-radius: 8px !important;
+}
+
+/* ==================== 菜单项（管理员侧边栏） ==================== */
+.el-menu-item {
+  border-radius: 8px;
+  margin: 3px 10px;
+  font-size: 14px;
 }

@@ -1,25 +1,35 @@
 <template>
   <div class="login-container" :style="{ backgroundImage: 'url(' + bgImg + ')' }">
     <div class="login-card">
+      <!-- 顶部标题区 -->
+      <div class="card-header">
+        <div class="logo-icon">
+          <el-icon :size="36"><OfficeBuilding /></el-icon>
+        </div>
+        <h1 class="app-title">智慧物业管理系统</h1>
+        <p class="app-subtitle" v-if="mode === 'login'">欢迎回来，请登录您的账户</p>
+        <p class="app-subtitle" v-else-if="mode === 'register'">创建新账户，加入社区</p>
+        <p class="app-subtitle" v-else>重置您的登录密码</p>
+      </div>
+
+      <!-- 登录模式切换 -->
       <div class="tabs" v-if="mode === 'login'">
         <el-radio-group v-model="userType" size="large">
           <el-radio-button label="owner">业主</el-radio-button>
           <el-radio-button label="admin">物业人员</el-radio-button>
-    </el-radio-group>
-  </div>
-  <div v-if="mode === 'register'" class="tabs">
-    <h3>业主注册</h3>
-  </div>
+        </el-radio-group>
+      </div>
+
       <!-- 登录表单 -->
       <el-form v-if="mode === 'login'" :model="loginForm" :rules="loginRules" ref="loginFormRef" label-width="0">
         <el-form-item prop="account">
-          <el-input v-model="loginForm.account" placeholder="账号" prefix-icon="User" />
+          <el-input v-model="loginForm.account" placeholder="请输入账号" size="large" />
         </el-form-item>
         <el-form-item prop="password">
-          <el-input v-model="loginForm.password" type="password" placeholder="密码" prefix-icon="Lock" show-password />
+          <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" size="large" show-password />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="handleLogin" :loading="loginLoading" style="width:100%">登 录</el-button>
+          <el-button type="primary" @click="handleLogin" :loading="loginLoading" size="large" class="login-btn">登 录</el-button>
         </el-form-item>
         <div class="links">
           <span @click="mode = 'register'">注册业主</span>
@@ -65,9 +75,9 @@
             <el-input v-model="registerForm.roomNumber" placeholder="例如 1-101" />
             <!-- 或者用下拉选择，但需要后端返回房间列表，此处先用输入框，后端会校验合法性 -->
           </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleRegister" :loading="regLoading" style="width:49%">注 册</el-button>
-          <el-button @click="mode = 'login'" style="width:49%">返回登录</el-button>
+        <el-form-item class="btn-row">
+          <el-button type="primary" @click="handleRegister" :loading="regLoading" class="action-btn">注 册</el-button>
+          <el-button @click="mode = 'login'" class="back-btn">返回登录</el-button>
         </el-form-item>
       </el-form>
 
@@ -85,9 +95,9 @@
         <el-form-item label="确认密码" prop="confirmNew">
           <el-input v-model="resetForm.confirmNew" type="password" show-password />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleReset" :loading="resetLoading" style="width:49%">重 置</el-button>
-          <el-button @click="mode = 'login'" style="width:49%">返回登录</el-button>
+        <el-form-item class="btn-row">
+          <el-button type="primary" @click="handleReset" :loading="resetLoading" class="action-btn">重 置</el-button>
+          <el-button @click="mode = 'login'" class="back-btn">返回登录</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -99,6 +109,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { OfficeBuilding } from '@element-plus/icons-vue'
 import { onMounted } from 'vue'
 // 导入背景图
 import bgImg from '@/assets/images/bg.jpg'
@@ -296,22 +307,117 @@ const handleReset = async () => {
   background-size: cover;
   background-position: center;
 }
+
 .login-card {
-  width: 400px;
-  padding: 30px;
-  background: rgba(255,255,255,0.9);
-  border-radius: 15px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-  backdrop-filter: blur(10px);
+  width: 420px;
+  padding: 40px 36px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+  backdrop-filter: blur(20px);
 }
+
+/* 顶部标题 */
+.card-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.logo-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #409eff, #337ecc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.4);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #303133;
+  letter-spacing: 1px;
+}
+
+.app-subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #909399;
+}
+
+/* 登录模式切换 */
 .tabs {
   text-align: center;
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
+
+.tabs :deep(.el-radio-button__inner) {
+  padding: 10px 32px;
+  border-radius: 0;
+}
+
+/* 登录按钮 */
+.login-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 16px;
+  letter-spacing: 4px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #409eff, #337ecc);
+  border: none;
+  box-shadow: 0 4px 15px rgba(64, 158, 255, 0.4);
+  transition: all 0.3s;
+}
+
+.login-btn:hover {
+  box-shadow: 0 6px 20px rgba(64, 158, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+/* 注册/忘记密码链接 */
 .links {
   display: flex;
   justify-content: space-between;
   color: #409eff;
   cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+}
+
+.links span {
+  transition: color 0.2s;
+}
+
+.links span:hover {
+  color: #337ecc;
+  text-decoration: underline;
+}
+
+/* 注册/重置的按钮 — 用 flex 保证对齐 */
+.btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-row .el-button {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  margin-left: 0;
+}
+
+.action-btn {
+  background: linear-gradient(135deg, #409eff, #337ecc);
+  border: none;
+  letter-spacing: 4px;
+}
+
+.back-btn {
+  /* 默认样式即可 */
 }
 </style>

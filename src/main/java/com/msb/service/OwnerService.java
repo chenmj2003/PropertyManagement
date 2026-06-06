@@ -13,4 +13,7 @@ public interface OwnerService {
     Owner getOwnerById(Integer id);
 
     void updateOwner(Owner owner);
+
+    /** 修改密码：验证旧密码后更新为新密码 */
+    void changePassword(Integer ownerId, String oldPassword, String newPassword);
 }

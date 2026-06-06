@@ -94,6 +94,7 @@
             </el-form>
             <div style="text-align: center; margin-top: 20px;">
               <el-button type="primary" @click="enterEdit">修改信息</el-button>
+              <el-button @click="pwdDialogVisible = true">修改密码</el-button>
             </div>
           </template>
 
@@ -131,6 +132,22 @@
           </template>
         </el-card>
       </div>
+
+      <!-- 修改密码弹窗 -->
+      <el-dialog v-model="pwdDialogVisible" title="修改密码" width="400px" :close-on-click-modal="false">
+        <el-form :model="pwdForm" label-width="80px">
+          <el-form-item label="原密码" required>
+            <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+          </el-form-item>
+          <el-form-item label="新密码" required>
+            <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="请输入新密码" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="pwdDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleChangePwd" :loading="pwdLoading">确定</el-button>
+        </template>
+      </el-dialog>
 
       <!-- 社区公告页 -->
       <div v-if="currentMenu === 'announcement'" class="page-container">
@@ -234,6 +251,11 @@ const router = useRouter()
 const currentMenu = ref('info')
 const isEditing = ref(false)
 
+// 修改密码
+const pwdDialogVisible = ref(false)
+const pwdLoading = ref(false)
+const pwdForm = reactive({ oldPassword: '', newPassword: '' })
+
 // ========== 个人信息相关 ==========
 const formData = reactive({
   name: '',
@@ -334,6 +356,27 @@ const saveInfo = async () => {
   } catch (e) {
     ElMessage.error('修改失败')
   }
+}
+
+const handleChangePwd = async () => {
+  if (!pwdForm.oldPassword) { ElMessage.warning('请输入原密码'); return }
+  if (!pwdForm.newPassword) { ElMessage.warning('请输入新密码'); return }
+  pwdLoading.value = true
+  try {
+    const res = await axios.put('/api/owner/password', {
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword
+    }, getHeaders())
+    if (res.data.code === 200) {
+      ElMessage.success('密码修改成功')
+      pwdDialogVisible.value = false
+      pwdForm.oldPassword = ''
+      pwdForm.newPassword = ''
+    } else {
+      ElMessage.error(res.data.msg || '修改失败')
+    }
+  } catch (e) { ElMessage.error('修改失败') }
+  finally { pwdLoading.value = false }
 }
 
 const logout = () => {

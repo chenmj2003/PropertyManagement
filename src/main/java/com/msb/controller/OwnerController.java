@@ -42,6 +42,31 @@ public class OwnerController {
         return Result.success("已退出登录");
     }
 
+    /**
+     * ✨新建✨ 修改密码
+     */
+    @PutMapping("/password")
+    public Result changePassword(@RequestHeader("token") String token,
+                                  @RequestBody Map<String, String> params) {
+        LoginToken loginToken = tokenMapper.selectByToken(token);
+        if (loginToken == null) {
+            return Result.fail(401, "请重新登录");
+        }
+        String oldPassword = params.get("oldPassword");
+        String newPassword = params.get("newPassword");
+
+        if (oldPassword == null || oldPassword.isEmpty()
+                || newPassword == null || newPassword.isEmpty()) {
+            return Result.fail(400, "请填写原密码和新密码");
+        }
+        try {
+            ownerService.changePassword(loginToken.getUserId(), oldPassword, newPassword);
+            return Result.success("密码修改成功", null);
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        }
+    }
+
     @GetMapping("/info")
     public Result getInfo(@RequestHeader("token") String token){
         LoginToken loginToken = tokenMapper.selectByToken(token);
