@@ -3,6 +3,7 @@ package com.msb.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.mapper.ParkingSpotMapper;
 import com.msb.mapper.TokenMapper;
 import com.msb.pojo.*;
@@ -35,6 +36,9 @@ public class OwnerController {
 
     @Autowired
     private ParkingSpotMapper parkingSpotMapper;
+
+    @Autowired
+    private CacheService cacheService;
 
     @PostMapping("/logout")
     public Result logout(@RequestHeader("token") String token){
@@ -203,6 +207,8 @@ public class OwnerController {
         }
         try {
             parkingSpotApplicationService.apply(spotId,loginToken.getUserId());
+            // 车位申请 → 清除仪表盘缓存，下次访问时自动重建
+            cacheService.clearDashboard();
             return Result.success("申请已提交，请等待管理员审核");
         }catch (RuntimeException e){
             return Result.fail(e.getMessage());
@@ -233,6 +239,9 @@ public class OwnerController {
         }
         try {
             parkingSpotApplicationService.directPay(applicationId, loginToken.getUserId());
+            // 车位支付完成 → 清除仪表盘缓存和收支统计缓存
+            cacheService.clearDashboard();
+            cacheService.clearIncomeExpenseStats();
             return Result.success("支付成功", null);
         }catch (RuntimeException e){
             return Result.fail(e.getMessage());

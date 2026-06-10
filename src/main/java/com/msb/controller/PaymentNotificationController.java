@@ -1,6 +1,7 @@
 package com.msb.controller;
 
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.pojo.PaymentNotification;
 import com.msb.service.PaymentNotificationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,9 @@ import java.util.Map;
 public class PaymentNotificationController {
     @Autowired
     private PaymentNotificationService paymentNotificationService;
+
+    @Autowired
+    private CacheService cacheService;
     // 业主端接收通知
     @GetMapping("/owner/paymentNotifications")
     public Result<List<PaymentNotification>> getOwnerPaymentNotifications(HttpServletRequest request){
@@ -41,6 +45,9 @@ public class PaymentNotificationController {
         }
         boolean success = paymentNotificationService.pay(notificationId, userId);
         if (success){
+            // 缴费状态变更 → 清除仪表盘缓存和收支统计缓存
+            cacheService.clearDashboard();
+            cacheService.clearIncomeExpenseStats();
             return Result.success("缴费成功");
         }else {
             return Result.fail(400,"缴费失败，通知不存在或已缴费");
@@ -93,6 +100,8 @@ public class PaymentNotificationController {
             // 发送通知
             boolean success = paymentNotificationService.sendNotification(ownerIds, notification);
             if (success){
+                // 新增缴费通知 → 清除仪表盘缓存，下次访问时自动重建
+                cacheService.clearDashboard();
                 return Result.success("缴费通知发送成功");
             }else {
                 return Result.fail(500,"发送失败");

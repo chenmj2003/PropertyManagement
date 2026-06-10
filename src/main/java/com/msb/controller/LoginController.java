@@ -1,11 +1,13 @@
 package com.msb.controller;
 
+import com.msb.component.LoginRateLimiter;
 import com.msb.mapper.BuildingMapper;
 import com.msb.pojo.Admin;
 import com.msb.pojo.Building;
 import com.msb.pojo.Owner;
 import com.msb.service.LoginService;
 import com.msb.service.TokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,12 +25,30 @@ public class LoginController {
     private BuildingMapper buildingMapper;
     @Autowired
     private TokenService tokenService;
+    @Autowired
+    private LoginRateLimiter loginRateLimiter;
 
     @PostMapping("/adminLogin")
-    public Map<String,Object> adminLogin(@RequestBody Admin admin){
+    public Map<String,Object> adminLogin(@RequestBody Admin admin, HttpServletRequest request){
         Map<String,Object> result = new HashMap<>();
+
+        // ==================== 登录限流检查 ====================
+        String ip = LoginRateLimiter.getClientIp(request);
+        String account = admin.getAccount();
+
+        // 检查是否被限流锁定
+        String rateLimitMsg = loginRateLimiter.checkRateLimit(ip, account);
+        if (rateLimitMsg != null) {
+            result.put("code", 429);
+            result.put("message", rateLimitMsg);
+            return result;
+        }
+
         Admin admin1 = loginService.adminLogin(admin.getAccount(), admin.getPassword());
         if (admin1 != null){
+            // 登录成功 → 清除失败记录
+            loginRateLimiter.clearFailedAttempts(ip, account);
+
             // 生成token
             String token = tokenService.createToken(admin1.getId(),"admin");
             result.put("code",200);
@@ -36,6 +56,9 @@ public class LoginController {
             result.put("role","admin");
             result.put("token",token);
         } else {
+            // 登录失败 → 记录一次失败尝试
+            loginRateLimiter.recordFailedAttempt(ip, account);
+
             result.put("code",400);
             result.put("message","账号或密码出错");
         }
@@ -43,16 +66,35 @@ public class LoginController {
     }
 
     @PostMapping("/ownerLogin")
-    public Map<String,Object> ownerLogin(@RequestBody Owner owner){
+    public Map<String,Object> ownerLogin(@RequestBody Owner owner, HttpServletRequest request){
         Map<String,Object> result = new HashMap<>();
+
+        // ==================== 登录限流检查 ====================
+        String ip = LoginRateLimiter.getClientIp(request);
+        String account = owner.getAccount();
+
+        // 检查是否被限流锁定
+        String rateLimitMsg = loginRateLimiter.checkRateLimit(ip, account);
+        if (rateLimitMsg != null) {
+            result.put("code", 429);
+            result.put("message", rateLimitMsg);
+            return result;
+        }
+
         Owner owner1 = loginService.ownerLogin(owner.getAccount(), owner.getPassword());
         if (owner1 != null){
+            // 登录成功 → 清除失败记录
+            loginRateLimiter.clearFailedAttempts(ip, account);
+
             String token = tokenService.createToken(owner1.getId(),"owner");
             result.put("code",200);
             result.put("message","业主登录成功");
             result.put("role","owner");
             result.put("token",token);
         }else {
+            // 登录失败 → 记录一次失败尝试
+            loginRateLimiter.recordFailedAttempt(ip, account);
+
             result.put("code",400);
             result.put("message","账号或密码出错");
         }

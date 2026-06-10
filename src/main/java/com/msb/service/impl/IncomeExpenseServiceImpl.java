@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.msb.component.CacheService;
 import com.msb.mapper.IncomeExpenseMapper;
 import com.msb.mapper.ParkingSpotApplicationMapper;
 import com.msb.mapper.ParkingSpotMapper;
@@ -43,6 +44,9 @@ public class IncomeExpenseServiceImpl
     @Autowired
     private ParkingSpotMapper parkingSpotMapper;
 
+    @Autowired
+    private CacheService cacheService;
+
     /**
      * ✨新建✨ 收支列表 — 合并三个数据源
      * 1. 手动记账（income_expense 表）
@@ -67,7 +71,7 @@ public class IncomeExpenseServiceImpl
         boolean wantExpense = type == null || type.isEmpty() || "expense".equals(type);
 
         List<IncomeExpense> result = new ArrayList<>();
-
+        Everything up-to-date
         // ======== 1. 手动记账（收入 + 支出） ========
         QueryWrapper<IncomeExpense> wrapper = new QueryWrapper<>();
         if (!wantIncome) wrapper.eq("type", "expense");
@@ -177,31 +181,41 @@ public class IncomeExpenseServiceImpl
     }
 
     /**
-     * ✨新建✨ 汇总统计：总收入、总支出、结余
+     * ✨Redis缓存✨ 汇总统计：总收入、总支出、结余
      * 收入 = 手动记账收入 + 物业费水费电费已缴费 + 车位购买已支付
      * 支出 = 手动记账支出
+     *
+     * Cache-Aside 模式：先查 Redis → 未命中查 DB → 写入 Redis
      */
     @Override
     public Map<String, Object> getStats() {
-        // ==================== 1. 手动记账收入 ====================
+        // ==================== 1. 先查 Redis 缓存 ====================
+        Map<String, Object> cached = cacheService.getIncomeExpenseStats();
+        if (cached != null) {
+            return cached;
+        }
+
+        // ==================== 2. 未命中，查数据库 ====================
+
+        // ---- 2.1 手动记账收入 ----
         Double manualIncome = getBaseMapper().selectList(
                 new QueryWrapper<IncomeExpense>().eq("type", "income")
         ).stream().mapToDouble(IncomeExpense::getAmount).sum();
 
-        // ==================== 2. 物业费/水费/电费 已缴费金额 ====================
+        // ---- 2.2 物业费/水费/电费 已缴费金额 ----
         Double feeIncome = paymentNotificationMapper.selectList(
                 new QueryWrapper<PaymentNotification>().eq("status", "paid")
         ).stream().mapToDouble(PaymentNotification::getAmount).sum();
 
-        // ==================== 3. 车位购买 已支付金额 ====================
+        // ---- 2.3 车位购买 已支付金额 ----
         Double parkingIncome = parkingSpotApplicationMapper.selectList(
                 new QueryWrapper<ParkingSpotApplication>().eq("status", "paid")
         ).stream().mapToDouble(app -> app.getPayAmount() != null ? app.getPayAmount() : 0).sum();
 
-        // ==================== 总收入 ====================
+        // ---- 总收入 = 三项之和 ----
         Double totalIncome = manualIncome + feeIncome + parkingIncome;
 
-        // ==================== 总支出（仅手动记账） ====================
+        // ---- 总支出（仅手动记账） ----
         Double totalExpense = getBaseMapper().selectList(
                 new QueryWrapper<IncomeExpense>().eq("type", "expense")
         ).stream().mapToDouble(IncomeExpense::getAmount).sum();
@@ -213,6 +227,10 @@ public class IncomeExpenseServiceImpl
         stats.put("totalIncome", totalIncome);                // 总收入（三项之和）
         stats.put("totalExpense", totalExpense);              // 总支出
         stats.put("balance", totalIncome - totalExpense);     // 结余
+
+        // ==================== 3. 写入 Redis 缓存 ====================
+        cacheService.setIncomeExpenseStats(stats);
+
         return stats;
     }
 }

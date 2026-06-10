@@ -2,6 +2,7 @@ package com.msb.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.mapper.OwnerMapper;
 import com.msb.mapper.ParkingSpotApplicationMapper;
 import com.msb.mapper.ParkingSpotMapper;
@@ -38,13 +39,23 @@ public class AdminDashboardController {
     @Autowired
     private PaymentNotificationMapper paymentNotificationMapper;
 
+    @Autowired
+    private CacheService cacheService;
+
     /**
-     * 仪表盘数据接口
+     * 仪表盘数据接口 — 带 Redis 缓存
      * 返回业主数、车位统计、申请统计、缴费统计、最近申请
      */
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> dashboard() {
 
+        // ==================== Cache-Aside 读：先查 Redis ====================
+        Map<String, Object> cached = cacheService.getDashboard();
+        if (cached != null) {
+            return Result.success(cached);
+        }
+
+        // ==================== Redis 未命中，查数据库 ====================
         Map<String, Object> data = new HashMap<>();
 
         // ==================== 1. 业主总数 ====================
@@ -115,6 +126,9 @@ public class AdminDashboardController {
                         .last("LIMIT 5")
         );
         data.put("recentApps", recentApps);
+
+        // ==================== Cache-Aside 写：将结果写入 Redis ====================
+        cacheService.setDashboard(data);
 
         return Result.success(data);
     }

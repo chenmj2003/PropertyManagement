@@ -2,6 +2,7 @@ package com.msb.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.pojo.IncomeExpense;
 import com.msb.service.IncomeExpenseService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +22,9 @@ public class IncomeExpenseController {
 
     @Autowired
     private IncomeExpenseService incomeExpenseService;
+
+    @Autowired
+    private CacheService cacheService;
 
     /**
      * ✨新建✨ 收支列表（可选按类型筛选）
@@ -49,6 +53,8 @@ public class IncomeExpenseController {
         }
         try {
             incomeExpenseService.add(record);
+            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            cacheService.clearIncomeExpenseStats();
             return Result.success("添加成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -70,6 +76,8 @@ public class IncomeExpenseController {
         try {
             record.setId(id);
             incomeExpenseService.update(record);
+            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            cacheService.clearIncomeExpenseStats();
             return Result.success("修改成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -89,6 +97,8 @@ public class IncomeExpenseController {
         }
         try {
             incomeExpenseService.delete(id);
+            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            cacheService.clearIncomeExpenseStats();
             return Result.success("删除成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());

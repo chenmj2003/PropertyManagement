@@ -2,9 +2,9 @@ package com.msb.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.msb.mapper.OwnerMapper;
-import com.msb.mapper.TokenMapper;
 import com.msb.pojo.Owner;
 import com.msb.service.OwnerService;
+import com.msb.service.TokenService;
 import com.msb.vo.OwnerVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ public class OwnerServiceImpl implements OwnerService {
     private OwnerMapper ownerMapper;
 
     @Autowired
-    private TokenMapper tokenMapper;
+    private TokenService tokenService;
 
     @Override
     public List<OwnerVo> selectAllOwner() {
@@ -28,7 +28,8 @@ public class OwnerServiceImpl implements OwnerService {
 
     @Override
     public void logout(String token) {
-        tokenMapper.deleteByToken(token);
+        // 同时删除 MySQL 和 Redis 中的 token，避免登出后 token 仍可用
+        tokenService.deleteToken(token);
     }
 
     @Override
