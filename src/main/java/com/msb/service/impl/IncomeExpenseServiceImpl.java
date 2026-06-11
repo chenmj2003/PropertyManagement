@@ -71,7 +71,7 @@ public class IncomeExpenseServiceImpl
         boolean wantExpense = type == null || type.isEmpty() || "expense".equals(type);
 
         List<IncomeExpense> result = new ArrayList<>();
-        Everything up-to-date
+
         // ======== 1. 手动记账（收入 + 支出） ========
         QueryWrapper<IncomeExpense> wrapper = new QueryWrapper<>();
         if (!wantIncome) wrapper.eq("type", "expense");

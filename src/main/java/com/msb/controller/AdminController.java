@@ -1,6 +1,7 @@
 package com.msb.controller;
 
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.pojo.Building;
 import com.msb.pojo.Vehicle;
 import com.msb.service.BuildingService;
@@ -21,6 +22,8 @@ public class AdminController {
     private BuildingService buildingService;
     @Autowired
     private VehicleService vehicleService;
+    @Autowired
+    private CacheService cacheService;
     // 查询所有业主
     @GetMapping("/owners")
     public Result listOwners(){
@@ -39,7 +42,22 @@ public class AdminController {
     }
     @GetMapping("/vehicles")
     public Result listVehicles(@RequestParam(required = false) String keyword){
+        // 有关键字搜索时不走缓存（组合太多）；无关键字时走缓存
+        if (keyword == null || keyword.isEmpty()) {
+            @SuppressWarnings("unchecked")
+            List<Vehicle> cached = (List<Vehicle>) cacheService.getVehicleAll();
+            if (cached != null) {
+                return Result.success(cached);
+            }
+        }
+
         List<Vehicle> allVehicles = vehicleService.getAllVehicles(keyword);
+
+        // 只有无关键字的全量查询才写入缓存
+        if (keyword == null || keyword.isEmpty()) {
+            cacheService.setVehicleAll(allVehicles);
+        }
+
         return Result.success(allVehicles);
     }
 }

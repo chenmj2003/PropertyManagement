@@ -124,7 +124,20 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
-        List<Vehicle> myVehicle = vehicleService.getMyVehicle(loginToken.getUserId());
+        Integer ownerId = loginToken.getUserId();
+
+        // Cache-Aside 读：先查 Redis
+        @SuppressWarnings("unchecked")
+        List<Vehicle> cached = (List<Vehicle>) cacheService.getOwnerVehicles(ownerId);
+        if (cached != null) {
+            return Result.success(cached);
+        }
+
+        List<Vehicle> myVehicle = vehicleService.getMyVehicle(ownerId);
+
+        // 写入 Redis
+        cacheService.setOwnerVehicles(ownerId, myVehicle);
+
         return Result.success(myVehicle);
     }
 
@@ -134,9 +147,13 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
+        Integer ownerId = loginToken.getUserId();
         vehicle.setId(null);
-        vehicle.setOwnerId(loginToken.getUserId());
+        vehicle.setOwnerId(ownerId);
         vehicleService.addVehicle(vehicle);
+        // 车辆数据变更 → 清除管理员全量缓存 + 当前业主缓存
+        cacheService.clearVehicleAll();
+        cacheService.clearOwnerVehicles(ownerId);
         return Result.success("添加成功");
     }
 
@@ -148,9 +165,13 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
+        Integer ownerId = loginToken.getUserId();
         vehicle.setId(id);
         try {
-            vehicleService.updateVehicle(vehicle,loginToken.getUserId());
+            vehicleService.updateVehicle(vehicle, ownerId);
+            // 车辆数据变更 → 清除管理员全量缓存 + 当前业主缓存
+            cacheService.clearVehicleAll();
+            cacheService.clearOwnerVehicles(ownerId);
             return Result.success("修改成功");
         }catch (Exception e){
             return Result.fail(403,e.getMessage());
@@ -163,8 +184,12 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
+        Integer ownerId = loginToken.getUserId();
         try {
-            vehicleService.deleteVehicle(id,loginToken.getUserId());
+            vehicleService.deleteVehicle(id, ownerId);
+            // 车辆数据变更 → 清除管理员全量缓存 + 当前业主缓存
+            cacheService.clearVehicleAll();
+            cacheService.clearOwnerVehicles(ownerId);
             return Result.success("删除成功");
         }catch (Exception e){
             return Result.fail(403,e.getMessage());
