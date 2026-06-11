@@ -13,4 +13,6 @@ public interface TokenMapper {
     int deleteByToken(String token);
     @Delete("DELETE FROM login_token WHERE user_id = #{userId} AND user_type = #{userType}")
     int deleteByUser(@Param("userId") int userId, @Param("userType") String userType);
+    @Select("SELECT * FROM login_token WHERE user_id = #{userId} AND user_type = #{userType}")
+    java.util.List<LoginToken> selectByUser(@Param("userId") int userId, @Param("userType") String userType);
 }

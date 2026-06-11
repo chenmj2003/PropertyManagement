@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,7 +31,11 @@ public class TokenServiceImpl implements TokenService {
      */
     @Override
     public String createToken(int userId, String userType) {
-        // 清除旧 token
+        // 先查出旧 token，逐个从 Redis 中删除，再批量删 MySQL
+        List<LoginToken> oldTokens = tokenMapper.selectByUser(userId, userType);
+        for (LoginToken old : oldTokens) {
+            redisTemplate.delete(TOKEN_PREFIX + old.getToken());
+        }
         tokenMapper.deleteByUser(userId, userType);
 
         // 生成新 token
