@@ -11,6 +11,7 @@ import com.msb.pojo.ParkingSpot;
 import com.msb.pojo.ParkingSpotApplication;
 import com.msb.pojo.PaymentNotification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,10 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * 管理员首页仪表盘
- * 聚合查询各项统计数据，不建 Service 层（仅简单统计，无需复用）
+ * 11 个独立查询全部并行执行 → 耗时从 Σ变为 max(单次)
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -42,9 +45,14 @@ public class AdminDashboardController {
     @Autowired
     private CacheService cacheService;
 
+    /** 自定义线程池（4核心/8最大） */
+    @Autowired
+    @Qualifier("taskExecutor")
+    private Executor taskExecutor;
+
     /**
-     * 仪表盘数据接口 — 带 Redis 缓存
-     * 返回业主数、车位统计、申请统计、缴费统计、最近申请
+     * ⚡多线程⚡ 仪表盘数据接口
+     * 11 条独立查询全部异步并行，结果用 CompletableFuture.allOf 等待后组装
      */
     @GetMapping("/dashboard")
     public Result<Map<String, Object>> dashboard() {
@@ -55,77 +63,74 @@ public class AdminDashboardController {
             return Result.success(cached);
         }
 
-        // ==================== Redis 未命中，查数据库 ====================
+        // ==================== 并行发起 11 个数据库查询 ====================
+
+        // ── 1. 业主总数 ──
+        CompletableFuture<Long> ownerCountFuture = CompletableFuture.supplyAsync(
+                () -> ownerMapper.selectCount(null), taskExecutor);
+
+        // ── 2. 车位统计（4 条） ──
+        CompletableFuture<Long> spotTotalFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotMapper.selectCount(null), taskExecutor);
+        CompletableFuture<Long> spotSoldFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotMapper.selectCount(
+                        new QueryWrapper<ParkingSpot>().eq("status", "sold")), taskExecutor);
+        CompletableFuture<Long> spotIdleFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotMapper.selectCount(
+                        new QueryWrapper<ParkingSpot>().eq("status", "idle")), taskExecutor);
+        CompletableFuture<Long> spotApplyingFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotMapper.selectCount(
+                        new QueryWrapper<ParkingSpot>().eq("status", "applying")), taskExecutor);
+
+        // ── 3. 车位申请统计（3 条） ──
+        CompletableFuture<Long> pendingAppCountFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotApplicationMapper.selectCount(
+                        new QueryWrapper<ParkingSpotApplication>().eq("status", "applying")), taskExecutor);
+        CompletableFuture<Long> approvedAppCountFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotApplicationMapper.selectCount(
+                        new QueryWrapper<ParkingSpotApplication>().eq("status", "approved")), taskExecutor);
+        CompletableFuture<Long> paidAppCountFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotApplicationMapper.selectCount(
+                        new QueryWrapper<ParkingSpotApplication>().eq("status", "paid")), taskExecutor);
+
+        // ── 4. 缴费通知统计（2 条） ──
+        CompletableFuture<Long> unpaidNoticeCountFuture = CompletableFuture.supplyAsync(
+                () -> paymentNotificationMapper.selectCount(
+                        new QueryWrapper<PaymentNotification>().eq("status", "unpaid")), taskExecutor);
+        CompletableFuture<Long> paidNoticeCountFuture = CompletableFuture.supplyAsync(
+                () -> paymentNotificationMapper.selectCount(
+                        new QueryWrapper<PaymentNotification>().eq("status", "paid")), taskExecutor);
+
+        // ── 5. 最近5条申请记录 ──
+        CompletableFuture<List<ParkingSpotApplication>> recentAppsFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotApplicationMapper.selectList(
+                        new QueryWrapper<ParkingSpotApplication>()
+                                .orderByDesc("apply_time")
+                                .last("LIMIT 5")), taskExecutor);
+
+        // ==================== 等待全部查询完成 ====================
+        CompletableFuture.allOf(
+                ownerCountFuture,
+                spotTotalFuture, spotSoldFuture, spotIdleFuture, spotApplyingFuture,
+                pendingAppCountFuture, approvedAppCountFuture, paidAppCountFuture,
+                unpaidNoticeCountFuture, paidNoticeCountFuture,
+                recentAppsFuture
+        ).join(); // 阻塞直到全部完成，任一失败则抛异常
+
+        // ==================== 组装结果（join() 不会阻塞，数据已就绪） ====================
         Map<String, Object> data = new HashMap<>();
 
-        // ==================== 1. 业主总数 ====================
-        // Owner 表没有 status 字段，直接统计全表
-        Long ownerCount = ownerMapper.selectCount(null);
-        data.put("ownerCount", ownerCount);
-
-        // ==================== 2. 车位统计 ====================
-        // 车位总数
-        Long spotTotal = parkingSpotMapper.selectCount(null);
-        data.put("spotTotal", spotTotal);
-
-        // 已售车位
-        Long spotSold = parkingSpotMapper.selectCount(
-                new QueryWrapper<ParkingSpot>().eq("status", "sold")
-        );
-        data.put("spotSold", spotSold);
-
-        // 空闲车位
-        Long spotIdle = parkingSpotMapper.selectCount(
-                new QueryWrapper<ParkingSpot>().eq("status", "idle")
-        );
-        data.put("spotIdle", spotIdle);
-
-        // 申购中车位（已被申请但未完成支付）
-        Long spotApplying = parkingSpotMapper.selectCount(
-                new QueryWrapper<ParkingSpot>().eq("status", "applying")
-        );
-        data.put("spotApplying", spotApplying);
-
-        // ==================== 3. 车位申请统计 ====================
-        // 待审核的申请
-        Long pendingAppCount = parkingSpotApplicationMapper.selectCount(
-                new QueryWrapper<ParkingSpotApplication>().eq("status", "applying")
-        );
-        data.put("pendingAppCount", pendingAppCount);
-
-        // 已通过的申请（待支付）
-        Long approvedAppCount = parkingSpotApplicationMapper.selectCount(
-                new QueryWrapper<ParkingSpotApplication>().eq("status", "approved")
-        );
-        data.put("approvedAppCount", approvedAppCount);
-
-        // 已支付的申请（购买完成）
-        Long paidAppCount = parkingSpotApplicationMapper.selectCount(
-                new QueryWrapper<ParkingSpotApplication>().eq("status", "paid")
-        );
-        data.put("paidAppCount", paidAppCount);
-
-        // ==================== 4. 缴费通知统计 ====================
-        // 待缴费通知数
-        Long unpaidNoticeCount = paymentNotificationMapper.selectCount(
-                new QueryWrapper<PaymentNotification>().eq("status", "unpaid")
-        );
-        data.put("unpaidNoticeCount", unpaidNoticeCount);
-
-        // 已缴费通知数
-        Long paidNoticeCount = paymentNotificationMapper.selectCount(
-                new QueryWrapper<PaymentNotification>().eq("status", "paid")
-        );
-        data.put("paidNoticeCount", paidNoticeCount);
-
-        // ==================== 5. 最近5条申请记录 ====================
-        // 按申请时间倒序，取前5条
-        List<ParkingSpotApplication> recentApps = parkingSpotApplicationMapper.selectList(
-                new QueryWrapper<ParkingSpotApplication>()
-                        .orderByDesc("apply_time")
-                        .last("LIMIT 5")
-        );
-        data.put("recentApps", recentApps);
+        data.put("ownerCount", ownerCountFuture.join());
+        data.put("spotTotal", spotTotalFuture.join());
+        data.put("spotSold", spotSoldFuture.join());
+        data.put("spotIdle", spotIdleFuture.join());
+        data.put("spotApplying", spotApplyingFuture.join());
+        data.put("pendingAppCount", pendingAppCountFuture.join());
+        data.put("approvedAppCount", approvedAppCountFuture.join());
+        data.put("paidAppCount", paidAppCountFuture.join());
+        data.put("unpaidNoticeCount", unpaidNoticeCountFuture.join());
+        data.put("paidNoticeCount", paidNoticeCountFuture.join());
+        data.put("recentApps", recentAppsFuture.join());
 
         // ==================== Cache-Aside 写：将结果写入 Redis ====================
         cacheService.setDashboard(data);

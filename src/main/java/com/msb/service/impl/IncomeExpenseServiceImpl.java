@@ -15,6 +15,7 @@ import com.msb.pojo.ParkingSpotApplication;
 import com.msb.pojo.PaymentNotification;
 import com.msb.service.IncomeExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -25,6 +26,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * ✨新建✨ 收支管理 Service 实现
@@ -46,6 +49,11 @@ public class IncomeExpenseServiceImpl
 
     @Autowired
     private CacheService cacheService;
+
+    /** 自定义线程池 */
+    @Autowired
+    @Qualifier("taskExecutor")
+    private Executor taskExecutor;
 
     /**
      * ✨新建✨ 收支列表 — 合并三个数据源
@@ -187,6 +195,10 @@ public class IncomeExpenseServiceImpl
      *
      * Cache-Aside 模式：先查 Redis → 未命中查 DB → 写入 Redis
      */
+    /**
+     * ⚡多线程⚡ 汇总统计：总收入、总支出、结余
+     * 4 条独立查询全部并行，耗时 = max(单次)
+     */
     @Override
     public Map<String, Object> getStats() {
         // ==================== 1. 先查 Redis 缓存 ====================
@@ -195,30 +207,45 @@ public class IncomeExpenseServiceImpl
             return cached;
         }
 
-        // ==================== 2. 未命中，查数据库 ====================
+        // ==================== 2. 并行发起 4 个独立查询 ====================
 
-        // ---- 2.1 手动记账收入 ----
-        Double manualIncome = getBaseMapper().selectList(
-                new QueryWrapper<IncomeExpense>().eq("type", "income")
-        ).stream().mapToDouble(IncomeExpense::getAmount).sum();
+        // ── 手动记账收入 ──
+        CompletableFuture<Double> manualIncomeFuture = CompletableFuture.supplyAsync(
+                () -> getBaseMapper().selectList(
+                        new QueryWrapper<IncomeExpense>().eq("type", "income")
+                ).stream().mapToDouble(IncomeExpense::getAmount).sum(), taskExecutor);
 
-        // ---- 2.2 物业费/水费/电费 已缴费金额 ----
-        Double feeIncome = paymentNotificationMapper.selectList(
-                new QueryWrapper<PaymentNotification>().eq("status", "paid")
-        ).stream().mapToDouble(PaymentNotification::getAmount).sum();
+        // ── 物业费/水费/电费 已缴费金额 ──
+        CompletableFuture<Double> feeIncomeFuture = CompletableFuture.supplyAsync(
+                () -> paymentNotificationMapper.selectList(
+                        new QueryWrapper<PaymentNotification>().eq("status", "paid")
+                ).stream().mapToDouble(PaymentNotification::getAmount).sum(), taskExecutor);
 
-        // ---- 2.3 车位购买 已支付金额 ----
-        Double parkingIncome = parkingSpotApplicationMapper.selectList(
-                new QueryWrapper<ParkingSpotApplication>().eq("status", "paid")
-        ).stream().mapToDouble(app -> app.getPayAmount() != null ? app.getPayAmount() : 0).sum();
+        // ── 车位购买 已支付金额 ──
+        CompletableFuture<Double> parkingIncomeFuture = CompletableFuture.supplyAsync(
+                () -> parkingSpotApplicationMapper.selectList(
+                        new QueryWrapper<ParkingSpotApplication>().eq("status", "paid")
+                ).stream().mapToDouble(app -> app.getPayAmount() != null ? app.getPayAmount() : 0).sum(),
+                taskExecutor);
 
-        // ---- 总收入 = 三项之和 ----
+        // ── 手动记账支出 ──
+        CompletableFuture<Double> totalExpenseFuture = CompletableFuture.supplyAsync(
+                () -> getBaseMapper().selectList(
+                        new QueryWrapper<IncomeExpense>().eq("type", "expense")
+                ).stream().mapToDouble(IncomeExpense::getAmount).sum(), taskExecutor);
+
+        // ==================== 3. 等待全部完成 ====================
+        CompletableFuture.allOf(
+                manualIncomeFuture, feeIncomeFuture, parkingIncomeFuture, totalExpenseFuture
+        ).join();
+
+        // ==================== 4. 组装结果（join() 不阻塞） ====================
+        Double manualIncome = manualIncomeFuture.join();
+        Double feeIncome = feeIncomeFuture.join();
+        Double parkingIncome = parkingIncomeFuture.join();
+        Double totalExpense = totalExpenseFuture.join();
+
         Double totalIncome = manualIncome + feeIncome + parkingIncome;
-
-        // ---- 总支出（仅手动记账） ----
-        Double totalExpense = getBaseMapper().selectList(
-                new QueryWrapper<IncomeExpense>().eq("type", "expense")
-        ).stream().mapToDouble(IncomeExpense::getAmount).sum();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("manualIncome", manualIncome);              // 手动记账收入
@@ -228,7 +255,7 @@ public class IncomeExpenseServiceImpl
         stats.put("totalExpense", totalExpense);              // 总支出
         stats.put("balance", totalIncome - totalExpense);     // 结余
 
-        // ==================== 3. 写入 Redis 缓存 ====================
+        // ==================== 5. 写入 Redis 缓存 ====================
         cacheService.setIncomeExpenseStats(stats);
 
         return stats;

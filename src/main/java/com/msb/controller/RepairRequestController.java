@@ -2,12 +2,14 @@ package com.msb.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.msb.common.Result;
+import com.msb.component.CacheService;
 import com.msb.pojo.RepairRequest;
 import com.msb.service.RepairRequestService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -21,6 +23,9 @@ public class RepairRequestController {
 
     @Autowired
     private RepairRequestService repairRequestService;
+
+    @Autowired
+    private CacheService cacheService;
 
     // ==================== 业主端 ====================
 
@@ -42,6 +47,8 @@ public class RepairRequestController {
 
         try {
             RepairRequest result = repairRequestService.submitRepair(repair, userId);
+            // 报修提交 → 清除业主报修缓存
+            cacheService.clearRepairsByOwner(userId);
             return Result.success("报修提交成功", result);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -60,7 +67,16 @@ public class RepairRequestController {
         Integer userId = (Integer) request.getAttribute("userId");
         String userType = (String) request.getAttribute("userType");
         if (!"owner".equals(userType)) return Result.fail(403, "权限不足");
-        return Result.success(repairRequestService.pageByOwnerId(userId, page, pageSize));
+
+        // Cache-Aside：按 ownerId + page + size 缓存
+        String cacheKey = CacheService.REPAIR_OWNER_PREFIX + userId + ":" + page + ":" + pageSize;
+        IPage<RepairRequest> cached = cacheService.getPageValue(cacheKey, RepairRequest.class);
+        if (cached != null) {
+            return Result.success(cached);
+        }
+        IPage<RepairRequest> result = repairRequestService.pageByOwnerId(userId, page, pageSize);
+        cacheService.setValue(cacheKey, result, Duration.ofMinutes(5));
+        return Result.success(result);
     }
 
     // ==================== 管理员端 ====================
@@ -77,6 +93,18 @@ public class RepairRequestController {
             HttpServletRequest request) {
         String userType = (String) request.getAttribute("userType");
         if (!"admin".equals(userType)) return Result.fail(403, "权限不足");
+
+        // 仅无状态筛选时走缓存（最常用场景）
+        if (status == null || status.isEmpty()) {
+            String cacheKey = CacheService.REPAIR_ADMIN_PREFIX + page + ":" + pageSize;
+            IPage<RepairRequest> cached = cacheService.getPageValue(cacheKey, RepairRequest.class);
+            if (cached != null) {
+                return Result.success(cached);
+            }
+            IPage<RepairRequest> result = repairRequestService.pageAllRepairs(page, pageSize, status);
+            cacheService.setValue(cacheKey, result, Duration.ofMinutes(5));
+            return Result.success(result);
+        }
         return Result.success(repairRequestService.pageAllRepairs(page, pageSize, status));
     }
 
@@ -95,6 +123,8 @@ public class RepairRequestController {
 
         try {
             repairRequestService.markProcessing(id);
+            // 报修状态变更 → 清除管理端报修缓存
+            cacheService.clearAdminRepairs();
             return Result.success("已标记为处理中", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -116,6 +146,8 @@ public class RepairRequestController {
 
         try {
             repairRequestService.markComplete(id);
+            // 报修状态变更 → 清除管理端报修缓存
+            cacheService.clearAdminRepairs();
             return Result.success("已标记为已完成", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());

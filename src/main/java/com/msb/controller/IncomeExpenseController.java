@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +37,18 @@ public class IncomeExpenseController {
             HttpServletRequest request) {
         String userType = (String) request.getAttribute("userType");
         if (!"admin".equals(userType)) return Result.fail(403, "权限不足");
-        // 返回合并后的全部数据（手动记账+系统缴费+车位收入），前端分页
-        return Result.success(incomeExpenseService.listByType(type));
+
+        // Cache-Aside：按 type 分 key 缓存（income / expense / all）
+        String cacheKey = CacheService.INCOME_EXPENSE_LIST_PREFIX
+                + (type != null && !type.isEmpty() ? type : "all");
+        List<IncomeExpense> cached = cacheService.getListValue(cacheKey, IncomeExpense.class);
+        if (cached != null) {
+            return Result.success(cached);
+        }
+
+        List<IncomeExpense> result = incomeExpenseService.listByType(type);
+        cacheService.setValue(cacheKey, result, Duration.ofMinutes(5));
+        return Result.success(result);
     }
 
     /**
@@ -53,8 +64,9 @@ public class IncomeExpenseController {
         }
         try {
             incomeExpenseService.add(record);
-            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
             return Result.success("添加成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -76,8 +88,9 @@ public class IncomeExpenseController {
         try {
             record.setId(id);
             incomeExpenseService.update(record);
-            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
             return Result.success("修改成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
@@ -97,8 +110,9 @@ public class IncomeExpenseController {
         }
         try {
             incomeExpenseService.delete(id);
-            // 收支数据变更 → 清除收支统计缓存，下次访问时自动重建
+            // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
             return Result.success("删除成功", null);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());

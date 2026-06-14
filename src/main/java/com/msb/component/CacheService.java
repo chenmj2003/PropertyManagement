@@ -41,6 +41,13 @@ public class CacheService {
     public static final String VEHICLE_ALL_KEY          = "cache:vehicle:all";              // 全部车辆（管理员）
     public static final String VEHICLE_OWNER_PREFIX     = "cache:vehicle:owner:";           // 业主车辆 → +ownerId
     public static final String ANNOUNCEMENT_PREFIX      = "cache:announcement:page:";       // 公告分页 → +page:size
+    // ✨新增✨ 高频接口缓存 Key
+    public static final String OWNER_LIST_KEY           = "cache:owner:list";               // 业主列表
+    public static final String INCOME_EXPENSE_LIST_PREFIX = "cache:income_expense:list:";   // 收支列表 → +type
+    public static final String PARKING_AVAILABLE_KEY    = "cache:parking:available";        // 可用车位（业主端）
+    public static final String REPAIR_OWNER_PREFIX      = "cache:repair:owner:";            // 业主报修 → +ownerId:page:size
+    public static final String REPAIR_ADMIN_PREFIX      = "cache:repair:admin:";            // 管理端报修 → +page:size
+    public static final String PAYMENT_OWNER_PREFIX     = "cache:payment:owner:";           // 业主缴费通知 → +ownerId
 
     // ==================== TTL ====================
     private static final long DASHBOARD_TTL_MINUTES  = 5L;
@@ -48,6 +55,11 @@ public class CacheService {
     private static final long BUILDING_TTL_MINUTES   = 30L;  // 楼栋几乎不变
     private static final long VEHICLE_TTL_MINUTES    = 10L;
     private static final long ANNOUNCEMENT_TTL_MINUTES = 10L;
+    private static final long OWNER_LIST_TTL_MINUTES = 10L;   // 业主列表
+    private static final long INCOME_EXPENSE_LIST_TTL_MINUTES = 5L; // 收支列表
+    private static final long PARKING_AVAILABLE_TTL_MINUTES = 3L; // 可用车位（变化快）
+    private static final long REPAIR_TTL_MINUTES     = 5L;    // 报修列表
+    private static final long PAYMENT_OWNER_TTL_MINUTES = 5L; // 缴费通知
 
     // ==================== 仪表盘缓存 ====================
 
@@ -152,7 +164,72 @@ public class CacheService {
         redisTemplate.delete(redisTemplate.keys(ANNOUNCEMENT_PREFIX + "*"));
     }
 
+    // ==================== ✨新增✨ 业主列表缓存 ====================
+    public void clearOwnerList() {
+        redisTemplate.delete(OWNER_LIST_KEY);
+    }
+
+    // ==================== ✨新增✨ 收支列表缓存 ====================
+    public void clearIncomeExpenseList() {
+        redisTemplate.delete(redisTemplate.keys(INCOME_EXPENSE_LIST_PREFIX + "*"));
+    }
+
+    // ==================== ✨新增✨ 可用车位缓存 ====================
+    public void clearAvailableParkingSpots() {
+        redisTemplate.delete(PARKING_AVAILABLE_KEY);
+    }
+
+    // ==================== ✨新增✨ 报修缓存 ====================
+    /** 清除某业主的报修分页缓存 */
+    public void clearRepairsByOwner(Integer ownerId) {
+        redisTemplate.delete(redisTemplate.keys(REPAIR_OWNER_PREFIX + ownerId + ":*"));
+    }
+    /** 清除管理端报修分页缓存 */
+    public void clearAdminRepairs() {
+        redisTemplate.delete(redisTemplate.keys(REPAIR_ADMIN_PREFIX + "*"));
+    }
+
+    // ==================== ✨新增✨ 缴费通知缓存 ====================
+    /** 清除某业主的缴费通知缓存 */
+    public void clearOwnerPayments(Integer ownerId) {
+        redisTemplate.delete(PAYMENT_OWNER_PREFIX + ownerId);
+    }
+
     // ==================== 通用工具：公开 ====================
+
+    /**
+     * 泛型 List 缓存读取（解决 List.class 反序列化丢失元素类型的问题）
+     * 用法：List<Owner> list = cacheService.getListValue(key, Owner.class);
+     */
+    public <T> List<T> getListValue(String key, Class<T> elementType) {
+        String json = redisTemplate.opsForValue().get(key);
+        if (json == null) return null;
+        try {
+            JavaType type = objectMapper.getTypeFactory().constructCollectionType(List.class, elementType);
+            return objectMapper.readValue(json, type);
+        } catch (Exception e) {
+            redisTemplate.delete(key); // 脏数据清除
+            return null;
+        }
+    }
+
+    /**
+     * 泛型 IPage 缓存读取（用于报修分页）
+     * 用法：IPage<RepairRequest> page = cacheService.getPageValue(key, RepairRequest.class);
+     */
+    public <T> com.baomidou.mybatisplus.core.metadata.IPage<T> getPageValue(
+            String key, Class<T> elementType) {
+        String json = redisTemplate.opsForValue().get(key);
+        if (json == null) return null;
+        try {
+            JavaType type = objectMapper.getTypeFactory().constructParametricType(
+                    com.baomidou.mybatisplus.extension.plugins.pagination.Page.class, elementType);
+            return objectMapper.readValue(json, type);
+        } catch (Exception e) {
+            redisTemplate.delete(key);
+            return null;
+        }
+    }
 
     /**
      * 通用缓存写入——将任意对象序列化为 JSON 写入 Redis

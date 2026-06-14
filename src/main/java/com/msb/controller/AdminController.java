@@ -24,10 +24,18 @@ public class AdminController {
     private VehicleService vehicleService;
     @Autowired
     private CacheService cacheService;
-    // 查询所有业主
+    // 查询所有业主（带 Redis 缓存）
     @GetMapping("/owners")
     public Result listOwners(){
+        // Cache-Aside 读
+        List<OwnerVo> cached = cacheService.getListValue(
+                CacheService.OWNER_LIST_KEY, OwnerVo.class);
+        if (cached != null) {
+            return Result.success(cached);
+        }
         List<OwnerVo> ownerVos = ownerService.selectAllOwner();
+        cacheService.setValue(CacheService.OWNER_LIST_KEY, ownerVos,
+                java.time.Duration.ofMinutes(10));
         return Result.success(ownerVos);
     }
     @GetMapping("/buildings")

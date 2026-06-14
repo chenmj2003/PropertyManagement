@@ -197,7 +197,7 @@ public class OwnerController {
     }
 
     /**
-     * 查看可购买的所有车位
+     * 查看可购买的所有车位（带 Redis 缓存，TTL 3 分钟）
      */
     @GetMapping("/parking-spots")
     public Result<List<ParkingSpot>> getAvailableSpots(@RequestHeader("token") String token){
@@ -205,9 +205,17 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
+        // Cache-Aside 读
+        List<ParkingSpot> cached = cacheService.getListValue(
+                CacheService.PARKING_AVAILABLE_KEY, ParkingSpot.class);
+        if (cached != null) {
+            return Result.success(cached);
+        }
         List<ParkingSpot> spots = parkingSpotMapper.selectList(
                 new QueryWrapper<ParkingSpot>().in("status", "idle", "applying").orderByAsc("spot_code")
         );
+        cacheService.setValue(CacheService.PARKING_AVAILABLE_KEY, spots,
+                java.time.Duration.ofMinutes(3));
         return Result.success(spots);
     }
 
@@ -232,8 +240,9 @@ public class OwnerController {
         }
         try {
             parkingSpotApplicationService.apply(spotId,loginToken.getUserId());
-            // 车位申请 → 清除仪表盘缓存，下次访问时自动重建
+            // 车位申请 → 清除仪表盘 + 可用车位缓存
             cacheService.clearDashboard();
+            cacheService.clearAvailableParkingSpots();
             return Result.success("申请已提交，请等待管理员审核");
         }catch (RuntimeException e){
             return Result.fail(e.getMessage());
@@ -264,9 +273,11 @@ public class OwnerController {
         }
         try {
             parkingSpotApplicationService.directPay(applicationId, loginToken.getUserId());
-            // 车位支付完成 → 清除仪表盘缓存和收支统计缓存
+            // 车位支付 → 清除仪表盘 + 收支统计 + 收支列表 + 可用车位
             cacheService.clearDashboard();
             cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
+            cacheService.clearAvailableParkingSpots();
             return Result.success("支付成功", null);
         }catch (RuntimeException e){
             return Result.fail(e.getMessage());

@@ -1,5 +1,6 @@
 package com.msb.controller;
 
+import com.msb.component.CacheService;
 import com.msb.component.LoginRateLimiter;
 import com.msb.mapper.BuildingMapper;
 import com.msb.pojo.Admin;
@@ -27,6 +28,8 @@ public class LoginController {
     private TokenService tokenService;
     @Autowired
     private LoginRateLimiter loginRateLimiter;
+    @Autowired
+    private CacheService cacheService;
 
     @PostMapping("/adminLogin")
     public Map<String,Object> adminLogin(@RequestBody Admin admin, HttpServletRequest request){
@@ -120,6 +123,8 @@ public class LoginController {
         }
         int row = loginService.registerOwner(owner);
         if(row > 0){
+            // 注册成功 → 清除业主列表缓存，下次访问自动重建
+            cacheService.clearOwnerList();
             result.put("code",200);
             result.put("message","注册成功");
         } else if (row == 0) {

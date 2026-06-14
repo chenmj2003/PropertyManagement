@@ -21,17 +21,23 @@ public class PaymentNotificationController {
 
     @Autowired
     private CacheService cacheService;
-    // 业主端接收通知
+    // 业主端接收通知（带 Redis 缓存）
     @GetMapping("/owner/paymentNotifications")
     public Result<List<PaymentNotification>> getOwnerPaymentNotifications(HttpServletRequest request){
 
         Integer userId = (Integer) request.getAttribute("userId");
         String userType = (String) request.getAttribute("userType");
-        // 检验是否为业主
         if (!("owner").equals(userType)){
             return Result.fail(403,"权限不足，仅业主可看");
         }
+        // Cache-Aside 读
+        String cacheKey = CacheService.PAYMENT_OWNER_PREFIX + userId;
+        List<PaymentNotification> cached = cacheService.getListValue(cacheKey, PaymentNotification.class);
+        if (cached != null) {
+            return Result.success(cached);
+        }
         List<PaymentNotification> notifications = paymentNotificationService.getByOwnerId(userId);
+        cacheService.setValue(cacheKey, notifications, java.time.Duration.ofMinutes(5));
         return Result.success(notifications);
     }
     // 业主端付钱
@@ -45,9 +51,11 @@ public class PaymentNotificationController {
         }
         boolean success = paymentNotificationService.pay(notificationId, userId);
         if (success){
-            // 缴费状态变更 → 清除仪表盘缓存和收支统计缓存
+            // 缴费状态变更 → 清除仪表盘 + 收支统计 + 收支列表 + 业主端缴费缓存
             cacheService.clearDashboard();
             cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
+            cacheService.clearOwnerPayments(userId);
             return Result.success("缴费成功");
         }else {
             return Result.fail(400,"缴费失败，通知不存在或已缴费");
@@ -100,8 +108,11 @@ public class PaymentNotificationController {
             // 发送通知
             boolean success = paymentNotificationService.sendNotification(ownerIds, notification);
             if (success){
-                // 新增缴费通知 → 清除仪表盘缓存，下次访问时自动重建
+                // 新增缴费通知 → 清除仪表盘 + 所有收件人的缴费缓存
                 cacheService.clearDashboard();
+                for (Integer ownerId : ownerIds) {
+                    cacheService.clearOwnerPayments(ownerId);
+                }
                 return Result.success("缴费通知发送成功");
             }else {
                 return Result.fail(500,"发送失败");

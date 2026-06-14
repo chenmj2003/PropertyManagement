@@ -24,8 +24,9 @@ public class AdminParkingController {
     @PostMapping("/spots")
     public Result addSpot(@RequestBody ParkingSpot parkingSpot){
         parkSpotService.addSpot(parkingSpot);
-        // 车位数据变更 → 清除仪表盘缓存，下次访问时自动重建
+        // 车位数据变更 → 清除仪表盘 + 可用车位缓存
         cacheService.clearDashboard();
+        cacheService.clearAvailableParkingSpots();
         return Result.success("车位发布成功");
     }
 
