@@ -51,6 +51,10 @@
           <el-icon><DocumentChecked /></el-icon>
           <span>车位审核</span>
         </el-menu-item>
+        <el-menu-item index="/admin/flash-sale">
+          <el-icon><Lightning /></el-icon>
+          <span>抢购车位</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <!-- 右侧内容 -->
@@ -69,7 +73,7 @@
 
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
-import { Van, User, Bell, DocumentChecked, DataBoard, Tools, Money } from '@element-plus/icons-vue'
+import { Van, User, Bell, DocumentChecked, DataBoard, Tools, Money, Lightning } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 

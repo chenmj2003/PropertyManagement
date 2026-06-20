@@ -11,6 +11,7 @@ import com.msb.pojo.RepairRequest;
 import com.msb.service.RepairRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,16 +36,16 @@ public class RepairRequestServiceImpl
     public RepairRequest submitRepair(RepairRequest repair, Integer ownerId) {
         // 校验必填字段
         if (repair.getTitle() == null || repair.getTitle().isEmpty()) {
-            throw new RuntimeException("请填写报修标题");
+            throw new BusinessException("请填写报修标题");
         }
         if (repair.getDescription() == null || repair.getDescription().isEmpty()) {
-            throw new RuntimeException("请填写报修描述");
+            throw new BusinessException("请填写报修描述");
         }
 
         // 从数据库获取业主信息
         Owner owner = ownerMapper.selectById(ownerId);
         if (owner == null) {
-            throw new RuntimeException("业主信息不存在");
+            throw new BusinessException("业主信息不存在");
         }
 
         // 组装报修记录
@@ -104,10 +105,10 @@ public class RepairRequestServiceImpl
     public void markProcessing(Integer repairId) {
         RepairRequest repair = getById(repairId);
         if (repair == null) {
-            throw new RuntimeException("报修记录不存在");
+            throw new BusinessException("报修记录不存在");
         }
         if (!"pending".equals(repair.getStatus())) {
-            throw new RuntimeException("当前状态不是待处理，无法转为处理中");
+            throw new BusinessException("当前状态不是待处理，无法转为处理中");
         }
         repair.setStatus("processing");
         updateById(repair);
@@ -120,10 +121,10 @@ public class RepairRequestServiceImpl
     public void markComplete(Integer repairId) {
         RepairRequest repair = getById(repairId);
         if (repair == null) {
-            throw new RuntimeException("报修记录不存在");
+            throw new BusinessException("报修记录不存在");
         }
         if ("completed".equals(repair.getStatus())) {
-            throw new RuntimeException("该报修已完成，无需重复操作");
+            throw new BusinessException("该报修已完成，无需重复操作");
         }
         repair.setStatus("completed");
         repair.setCompleteTime(LocalDateTime.now());

@@ -8,6 +8,7 @@ import com.msb.mapper.AnnouncementMapper;
 import com.msb.pojo.Announcement;
 import com.msb.service.AnnouncementService;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -42,10 +43,10 @@ public class AnnouncementServiceImpl
     @Override
     public void publish(Announcement announcement) {
         if (announcement.getTitle() == null || announcement.getTitle().isEmpty()) {
-            throw new RuntimeException("请输入公告标题");
+            throw new BusinessException("请输入公告标题");
         }
         if (announcement.getContent() == null || announcement.getContent().isEmpty()) {
-            throw new RuntimeException("请输入公告内容");
+            throw new BusinessException("请输入公告内容");
         }
         announcement.setId(null);
         announcement.setCreateTime(LocalDateTime.now());
@@ -59,7 +60,7 @@ public class AnnouncementServiceImpl
     public void update(Announcement announcement) {
         Announcement exist = getById(announcement.getId());
         if (exist == null) {
-            throw new RuntimeException("公告不存在");
+            throw new BusinessException("公告不存在");
         }
         exist.setTitle(announcement.getTitle());
         exist.setContent(announcement.getContent());
@@ -72,7 +73,7 @@ public class AnnouncementServiceImpl
     @Override
     public void delete(Integer id) {
         if (!removeById(id)) {
-            throw new RuntimeException("删除失败，公告不存在");
+            throw new BusinessException("删除失败，公告不存在");
         }
     }
 }

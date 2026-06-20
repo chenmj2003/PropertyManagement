@@ -45,14 +45,10 @@ public class RepairRequestController {
             return Result.fail(403, "权限不足，仅业主可提交报修");
         }
 
-        try {
             RepairRequest result = repairRequestService.submitRepair(repair, userId);
             // 报修提交 → 清除业主报修缓存
             cacheService.clearRepairsByOwner(userId);
             return Result.success("报修提交成功", result);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -121,14 +117,10 @@ public class RepairRequestController {
             return Result.fail(403, "权限不足");
         }
 
-        try {
             repairRequestService.markProcessing(id);
             // 报修状态变更 → 清除管理端报修缓存
             cacheService.clearAdminRepairs();
             return Result.success("已标记为处理中", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -144,13 +136,9 @@ public class RepairRequestController {
             return Result.fail(403, "权限不足");
         }
 
-        try {
             repairRequestService.markComplete(id);
             // 报修状态变更 → 清除管理端报修缓存
             cacheService.clearAdminRepairs();
             return Result.success("已标记为已完成", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 }

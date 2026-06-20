@@ -7,6 +7,7 @@ import com.msb.component.CacheService;
 import com.msb.mapper.ParkingSpotMapper;
 import com.msb.mapper.TokenMapper;
 import com.msb.pojo.*;
+import com.msb.service.FlashSaleService;
 import com.msb.service.OwnerService;
 import com.msb.service.ParkingSpotApplicationService;
 import com.msb.service.PaymentNotificationService;
@@ -39,6 +40,9 @@ public class OwnerController {
 
     @Autowired
     private CacheService cacheService;
+
+    @Autowired
+    private FlashSaleService flashSaleService;
 
     @PostMapping("/logout")
     public Result logout(@RequestHeader("token") String token){
@@ -83,12 +87,8 @@ public class OwnerController {
                 || newPassword == null || newPassword.isEmpty()) {
             return Result.fail(400, "请填写原密码和新密码");
         }
-        try {
-            ownerService.changePassword(loginToken.getUserId(), oldPassword, newPassword);
-            return Result.success("密码修改成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
+        ownerService.changePassword(loginToken.getUserId(), oldPassword, newPassword);
+        return Result.success("密码修改成功", null);
     }
 
     @GetMapping("/info")
@@ -167,15 +167,10 @@ public class OwnerController {
         }
         Integer ownerId = loginToken.getUserId();
         vehicle.setId(id);
-        try {
-            vehicleService.updateVehicle(vehicle, ownerId);
-            // 车辆数据变更 → 清除管理员全量缓存 + 当前业主缓存
-            cacheService.clearVehicleAll();
-            cacheService.clearOwnerVehicles(ownerId);
-            return Result.success("修改成功");
-        }catch (Exception e){
-            return Result.fail(403,e.getMessage());
-        }
+        vehicleService.updateVehicle(vehicle, ownerId);
+        cacheService.clearVehicleAll();
+        cacheService.clearOwnerVehicles(ownerId);
+        return Result.success("修改成功");
     }
 
     @DeleteMapping("/vehicle/{id}")
@@ -185,15 +180,10 @@ public class OwnerController {
             return Result.fail(401,"请重新登录");
         }
         Integer ownerId = loginToken.getUserId();
-        try {
-            vehicleService.deleteVehicle(id, ownerId);
-            // 车辆数据变更 → 清除管理员全量缓存 + 当前业主缓存
-            cacheService.clearVehicleAll();
-            cacheService.clearOwnerVehicles(ownerId);
-            return Result.success("删除成功");
-        }catch (Exception e){
-            return Result.fail(403,e.getMessage());
-        }
+        vehicleService.deleteVehicle(id, ownerId);
+        cacheService.clearVehicleAll();
+        cacheService.clearOwnerVehicles(ownerId);
+        return Result.success("删除成功");
     }
 
     /**
@@ -238,15 +228,10 @@ public class OwnerController {
         if (loginToken == null){
             return Result.fail(401,"请重新登录");
         }
-        try {
-            parkingSpotApplicationService.apply(spotId,loginToken.getUserId());
-            // 车位申请 → 清除仪表盘 + 可用车位缓存
-            cacheService.clearDashboard();
-            cacheService.clearAvailableParkingSpots();
-            return Result.success("申请已提交，请等待管理员审核");
-        }catch (RuntimeException e){
-            return Result.fail(e.getMessage());
-        }
+        parkingSpotApplicationService.apply(spotId,loginToken.getUserId());
+        cacheService.clearDashboard();
+        cacheService.clearAvailableParkingSpots();
+        return Result.success("申请已提交，请等待管理员审核");
     }
 
     // 查看车位购买记录
@@ -271,17 +256,12 @@ public class OwnerController {
         if (loginToken == null) {
             return Result.fail(401, "请重新登录");
         }
-        try {
-            parkingSpotApplicationService.directPay(applicationId, loginToken.getUserId());
-            // 车位支付 → 清除仪表盘 + 收支统计 + 收支列表 + 可用车位
-            cacheService.clearDashboard();
-            cacheService.clearIncomeExpenseStats();
-            cacheService.clearIncomeExpenseList();
-            cacheService.clearAvailableParkingSpots();
-            return Result.success("支付成功", null);
-        }catch (RuntimeException e){
-            return Result.fail(e.getMessage());
-        }
+        parkingSpotApplicationService.directPay(applicationId, loginToken.getUserId());
+        cacheService.clearDashboard();
+        cacheService.clearIncomeExpenseStats();
+        cacheService.clearIncomeExpenseList();
+        cacheService.clearAvailableParkingSpots();
+        return Result.success("支付成功", null);
     }
 
     /**
@@ -312,11 +292,56 @@ public class OwnerController {
             item.put("spotCode", spot != null ? spot.getSpotCode() : "未知");
             item.put("buildingId", spot != null ? spot.getBuildingId() : null);
             item.put("location", spot != null ? spot.getLocation() : "");
-            item.put("price", spot != null ? spot.getPrice() : app.getPayAmount());
+            // 原价（车位标价）
+            item.put("originalPrice", spot != null ? spot.getPrice() : app.getPayAmount());
+            // 实际支付价（抢购特价 or 原价）
+            item.put("price", app.getPayAmount());
+            // 销售类型：flash_sale 前端显示抢购样式
+            item.put("saleType", spot != null ? spot.getSaleType() : "normal");
             item.put("payTime", app.getPayTime());
             item.put("tradeNo", app.getTradeNo());
             result.add(item);
         }
         return Result.success(result);
+    }
+
+    // ==================== 抢购车位 ====================
+
+    /**
+     * 业主查看可抢购车位列表
+     * GET /api/owner/parking/flash-sales
+     */
+    @GetMapping("/parking/flash-sales")
+    public Result<List<ParkingSpot>> listFlashSales(@RequestHeader("token") String token) {
+        LoginToken loginToken = tokenMapper.selectByToken(token);
+        if (loginToken == null) {
+            return Result.fail(401, "请重新登录");
+        }
+        return Result.success(flashSaleService.listAvailableFlashSales());
+    }
+
+    /**
+     * 抢购车位（核心接口）
+     * POST /api/owner/parking/flash-grab/{spotId}
+     *
+     * 使用 Redis SETNX 原子锁保证“先到先得”
+     */
+    @PostMapping("/parking/flash-grab/{spotId}")
+    public Result<Void> flashGrab(@RequestHeader("token") String token,
+                                   @PathVariable Long spotId) {
+        LoginToken loginToken = tokenMapper.selectByToken(token);
+        if (loginToken == null) {
+            return Result.fail(401, "请重新登录");
+        }
+        String msg = flashSaleService.grabSpot(spotId, loginToken.getUserId());
+        if ("抢购成功".equals(msg)) {
+            cacheService.clearDashboard();
+            cacheService.clearAvailableParkingSpots();
+            cacheService.clearIncomeExpenseStats();
+            cacheService.clearIncomeExpenseList();
+            return Result.success(msg, null);
+        } else {
+            return Result.fail(msg);
+        }
     }
 }

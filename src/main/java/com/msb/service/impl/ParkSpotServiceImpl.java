@@ -8,6 +8,7 @@ import com.msb.pojo.ParkingSpot;
 import com.msb.service.ParkSpotService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 
 import java.util.List;
 @Service
@@ -17,7 +18,7 @@ public class ParkSpotServiceImpl implements ParkSpotService {
     @Override
     public void addSpot(ParkingSpot parkingSpot) {
         if (parkingSpotMapper.selectCount(new QueryWrapper<ParkingSpot>().eq("spot_code",parkingSpot.getSpotCode())) > 0){
-            throw new RuntimeException("车位编号已存在");
+            throw new BusinessException("车位编号已存在");
         }
         parkingSpot.setStatus("idle");
         parkingSpotMapper.insert(parkingSpot);

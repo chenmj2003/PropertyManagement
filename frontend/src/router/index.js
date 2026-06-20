@@ -11,6 +11,7 @@ const VehicleMgmt = () => import('@/views/admin/VehicleMgmt.vue')
 const PaymentMgmt = () => import('@/views/admin/PaymentMgmt.vue')
 const RepairMgmt = () => import('@/views/admin/RepairMgmt.vue')
 const IncomeExpenseMgmt = () => import('@/views/admin/IncomeExpenseMgmt.vue')
+const FlashSaleMgmt = () => import('@/views/admin/FlashSaleMgmt.vue')
 const OwnerParking = () => import('@/views/owner/OwnerParking.vue')
 const ParkingApplicationMgmt = () => import('@/views/admin/ParkingApplicationMgmt.vue')
 const routes = [
@@ -37,7 +38,8 @@ const routes = [
       { path: 'payment', name: 'AdminPayment', component: PaymentMgmt },
       { path: 'income-expenses', name: 'AdminIncomeExpenses', component: IncomeExpenseMgmt },
       { path: 'repairs', name: 'AdminRepairs', component: RepairMgmt },
-      { path: 'parking-applications', name: 'AdminParkingApplications', component: ParkingApplicationMgmt }
+      { path: 'parking-applications', name: 'AdminParkingApplications', component: ParkingApplicationMgmt },
+      { path: 'flash-sale', name: 'AdminFlashSale', component: FlashSaleMgmt }
     ]
   },
   { path: '/', redirect: '/login' }

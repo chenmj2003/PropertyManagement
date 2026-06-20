@@ -51,6 +51,22 @@
         <el-icon><Shop /></el-icon>
         <span>车位购买</span>
       </div>
+      <div
+        class="sidebar-item"
+        :class="{ active: currentMenu === 'flashSale' }"
+        @click="currentMenu = 'flashSale'"
+      >
+        <el-icon><Lightning /></el-icon>
+        <span>抢购车位</span>
+      </div>
+      <div
+        class="sidebar-item"
+        :class="{ active: currentMenu === 'mySpots' }"
+        @click="currentMenu = 'mySpots'"
+      >
+        <el-icon><Finished /></el-icon>
+        <span>我的车位</span>
+      </div>
     </div>
 
     <!-- 右侧内容区 -->
@@ -174,6 +190,14 @@
       <div v-if="currentMenu === 'parking'" class="page-container">
         <OwnerParking />
       </div>
+      <!-- 🔥 抢购车位页 -->
+      <div v-if="currentMenu === 'flashSale'" class="page-container">
+        <OwnerFlashSale />
+      </div>
+      <!-- 🏠 我的车位 -->
+      <div v-if="currentMenu === 'mySpots'" class="page-container">
+        <OwnerMySpots />
+      </div>
       <!-- 报修申请页 -->
       <div v-if="currentMenu === 'repair'" class="page-container">
         <OwnerRepair />
@@ -252,19 +276,25 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 // computed already imported, adding pagination state below
-import { User, Van, Money, Shop, Tools, Bell, Camera } from '@element-plus/icons-vue'
+import { User, Van, Money, Shop, Tools, Bell, Camera, Lightning, Finished } from '@element-plus/icons-vue'
 import OwnerParking from './OwnerParking.vue'
 import OwnerPayment from './OwnerPayment.vue'
 import OwnerRepair from './OwnerRepair.vue'
 import OwnerAnnouncement from './OwnerAnnouncement.vue'
+import OwnerFlashSale from './OwnerFlashSale.vue'
+import OwnerMySpots from './OwnerMySpots.vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
-const currentMenu = ref('info')
+// 从 sessionStorage 恢复上次的菜单，没有则默认个人信息
+const savedMenu = sessionStorage.getItem('ownerMenu')
+const currentMenu = ref(savedMenu || 'info')
+// 菜单切换时保存到 sessionStorage，刷新不丢失
+watch(currentMenu, (val) => sessionStorage.setItem('ownerMenu', val))
 const isEditing = ref(false)
 
 // 修改密码

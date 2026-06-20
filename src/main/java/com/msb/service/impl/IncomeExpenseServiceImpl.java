@@ -17,6 +17,7 @@ import com.msb.service.IncomeExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -144,13 +145,13 @@ public class IncomeExpenseServiceImpl
     @Override
     public void add(IncomeExpense record) {
         if (record.getType() == null || record.getType().isEmpty()) {
-            throw new RuntimeException("请选择收支类型");
+            throw new BusinessException("请选择收支类型");
         }
         if (record.getCategory() == null || record.getCategory().isEmpty()) {
-            throw new RuntimeException("请选择分类");
+            throw new BusinessException("请选择分类");
         }
         if (record.getAmount() == null || record.getAmount() <= 0) {
-            throw new RuntimeException("请输入正确的金额");
+            throw new BusinessException("请输入正确的金额");
         }
 
         record.setId(null);
@@ -165,7 +166,7 @@ public class IncomeExpenseServiceImpl
     public void update(IncomeExpense record) {
         IncomeExpense exist = getById(record.getId());
         if (exist == null) {
-            throw new RuntimeException("记录不存在");
+            throw new BusinessException("记录不存在");
         }
 
         // 只更新业务字段，保留创建时间
@@ -184,7 +185,7 @@ public class IncomeExpenseServiceImpl
     @Override
     public void delete(Integer id) {
         if (!removeById(id)) {
-            throw new RuntimeException("删除失败，记录不存在");
+            throw new BusinessException("删除失败，记录不存在");
         }
     }
 

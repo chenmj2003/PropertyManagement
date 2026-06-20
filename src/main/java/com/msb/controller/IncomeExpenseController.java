@@ -62,15 +62,11 @@ public class IncomeExpenseController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             incomeExpenseService.add(record);
             // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
             cacheService.clearIncomeExpenseList();
             return Result.success("添加成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -85,16 +81,12 @@ public class IncomeExpenseController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             record.setId(id);
             incomeExpenseService.update(record);
             // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
             cacheService.clearIncomeExpenseList();
             return Result.success("修改成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -108,15 +100,11 @@ public class IncomeExpenseController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             incomeExpenseService.delete(id);
             // 收支数据变更 → 清除统计缓存 + 列表缓存
             cacheService.clearIncomeExpenseStats();
             cacheService.clearIncomeExpenseList();
             return Result.success("删除成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**

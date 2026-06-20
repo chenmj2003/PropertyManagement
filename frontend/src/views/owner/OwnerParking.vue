@@ -85,28 +85,6 @@
         <el-pagination v-if="myApplications.length > appPageSize" v-model:current-page="appPage" :page-size="appPageSize" :total="myApplications.length" layout="total, prev, pager, next" style="margin-top:16px;justify-content:flex-end" />
       </el-tab-pane>
 
-      <el-tab-pane label="已购车位" name="purchased">
-        <div class="spot-grid" v-loading="purchasedLoading">
-          <el-card
-            v-for="spot in purchasedSpots"
-            :key="spot.applicationId"
-            shadow="hover"
-            class="spot-card purchased"
-          >
-            <div class="spot-header">
-              <el-tag type="success" size="small">已购买</el-tag>
-            </div>
-            <div class="spot-code">{{ spot.spotCode }}</div>
-            <div class="spot-info">
-              <p><strong>位置：</strong>{{ spot.location || '未指定' }}</p>
-              <p><strong>购买价格：</strong><span class="price">¥{{ spot.price?.toFixed(2) }}</span></p>
-              <p><strong>购买时间：</strong>{{ formatDate(spot.payTime) }}</p>
-            </div>
-          </el-card>
-
-          <el-empty v-if="purchasedSpots.length === 0 && !purchasedLoading" description="暂无已购车位" />
-        </div>
-      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -120,12 +98,10 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const activeTab = ref('available')
 const availableSpots = ref([])
 const myApplications = ref([])
-const purchasedSpots = ref([])
 const spotsLoading = ref(false)
 const applicationsLoading = ref(false)
 const appPage = ref(1); const appPageSize = ref(10)
 const pagedApps = computed(() => myApplications.value.slice((appPage.value-1)*appPageSize.value, appPage.value*appPageSize.value))
-const purchasedLoading = ref(false)
 const applyingId = ref(null)
 const payingId = ref(null)
 
@@ -164,22 +140,6 @@ const loadMyApplications = async () => {
     ElMessage.error('获取申请记录失败')
   } finally {
     applicationsLoading.value = false
-  }
-}
-
-const loadPurchasedSpots = async () => {
-  purchasedLoading.value = true
-  try {
-    const res = await axios.get('/api/owner/purchased-spots', getHeaders())
-    if (res.data.code === 200) {
-      purchasedSpots.value = res.data.data
-    } else {
-      ElMessage.error(res.data.msg || '获取已购车位失败')
-    }
-  } catch (e) {
-    ElMessage.error('获取已购车位失败')
-  } finally {
-    purchasedLoading.value = false
   }
 }
 
@@ -228,7 +188,6 @@ const payForSpot = async (application) => {
       if (res.data.code === 200) {
         ElMessage.success('支付成功')
         loadMyApplications()
-        loadPurchasedSpots()
       } else {
         ElMessage.error(res.data.msg || '支付失败')
       }
@@ -271,8 +230,6 @@ const handleTabChange = (tab) => {
     loadAvailableSpots()
   } else if (tab === 'myApplications') {
     loadMyApplications()
-  } else if (tab === 'purchased') {
-    loadPurchasedSpots()
   }
 }
 
@@ -330,6 +287,18 @@ onMounted(() => {
 .price {
   color: #f56c6c;
   font-size: 18px;
+  font-weight: bold;
+}
+
+.original-price {
+  color: #909399;
+  text-decoration: line-through;
+  font-size: 14px;
+}
+
+.flash-price {
+  color: #f56c6c;
+  font-size: 20px;
   font-weight: bold;
 }
 </style>

@@ -9,6 +9,7 @@ import com.msb.pojo.ParkingSpotApplication;
 import com.msb.service.ParkingSpotApplicationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -30,14 +31,14 @@ public class ParkingSpotApplicationServiceImpl extends ServiceImpl<ParkingSpotAp
                 .in("status","applying","approved");
         Long count = baseMapper.selectCount(wrapper);
         if (count > 0){
-            throw new RuntimeException("已提交过该车位的申请，请勿重复提交");
+            throw new BusinessException("已提交过该车位的申请，请勿重复提交");
         }
         ParkingSpot spot = parkingSpotMapper.selectById(spotId);
         if (spot == null){
-            throw new RuntimeException("车位不存在");
+            throw new BusinessException("车位不存在");
         }
         if (!"idle".equals(spot.getStatus())){
-            throw new RuntimeException("当前车位不可购买");
+            throw new BusinessException("当前车位不可购买");
         }
         spot.setStatus("applying");
         parkingSpotMapper.updateById(spot);
@@ -55,10 +56,10 @@ public class ParkingSpotApplicationServiceImpl extends ServiceImpl<ParkingSpotAp
     public void approve(Long applicationId, Integer adminId) {
         ParkingSpotApplication application = baseMapper.selectById(applicationId);
         if (application == null){
-            throw new RuntimeException("申请不存在");
+            throw new BusinessException("申请不存在");
         }
         if (!"applying".equals(application.getStatus())){
-            throw new RuntimeException("当前申请状态无法审核");
+            throw new BusinessException("当前申请状态无法审核");
         }
         application.setStatus("approved");
         application.setAdminId(adminId);
@@ -72,10 +73,10 @@ public class ParkingSpotApplicationServiceImpl extends ServiceImpl<ParkingSpotAp
     public void reject(Long applicationId, Integer adminId, String reason) {
         ParkingSpotApplication application = baseMapper.selectById(applicationId);
         if (application == null){
-            throw new RuntimeException("申请不存在");
+            throw new BusinessException("申请不存在");
         }
         if (!"applying".equals(application.getStatus())){
-            throw new RuntimeException("当前状态无法审核");
+            throw new BusinessException("当前状态无法审核");
         }
 
         application.setStatus("rejected");
@@ -96,20 +97,20 @@ public class ParkingSpotApplicationServiceImpl extends ServiceImpl<ParkingSpotAp
     public void directPay(Long applicationId, Integer ownerId) {
         ParkingSpotApplication application = baseMapper.selectById(applicationId);
         if (application == null) {
-            throw new RuntimeException("申请记录不存在");
+            throw new BusinessException("申请记录不存在");
         }
 
         // 校验：只能支付自己的申请
         if (!ownerId.equals(application.getOwnerId())) {
-            throw new RuntimeException("无权操作此申请");
+            throw new BusinessException("无权操作此申请");
         }
 
         if ("paid".equals(application.getStatus())) {
-            throw new RuntimeException("该申请已支付，无需重复支付");
+            throw new BusinessException("该申请已支付，无需重复支付");
         }
 
         if (!"approved".equals(application.getStatus())) {
-            throw new RuntimeException("当前申请状态不是已通过，无法支付: " + application.getStatus());
+            throw new BusinessException("当前申请状态不是已通过，无法支付: " + application.getStatus());
         }
 
         // 获取车位信息（需要价格）

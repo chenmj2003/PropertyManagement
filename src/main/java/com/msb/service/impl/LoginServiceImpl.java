@@ -9,6 +9,7 @@ import com.msb.pojo.Building;
 import com.msb.pojo.Owner;
 import com.msb.service.LoginService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -19,58 +20,103 @@ public class LoginServiceImpl implements LoginService {
 
     @Autowired
     private AdminMapper adminMapper;
+
     @Autowired
     private OwnerMapper ownerMapper;
+
     @Autowired
     private BuildingMapper buildingMapper;
 
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
     @Override
     public Admin adminLogin(String account, String password) {
+        // 只按账号查，密码用 BCrypt 校验
         QueryWrapper<Admin> wrapper = new QueryWrapper<>();
-        wrapper.eq("account",account).eq("password",password);
-        return adminMapper.selectOne(wrapper);
+        wrapper.eq("account", account);
+        Admin admin = adminMapper.selectOne(wrapper);
+        if (admin == null) return null;
+
+        // BCrypt 匹配
+        if (encoder.matches(password, admin.getPassword())) {
+            return admin;
+        }
+        // 兼容旧明文密码（首次用明文登录后自动升级为 BCrypt）
+        if (password.equals(admin.getPassword())) {
+            admin.setPassword(encoder.encode(password));
+            adminMapper.updateById(admin);
+            return admin;
+        }
+        return null;
     }
 
     @Override
     public Owner ownerLogin(String account, String password) {
         QueryWrapper<Owner> wrapper = new QueryWrapper<>();
-        wrapper.eq("account",account).eq("password",password);
-        return ownerMapper.selectOne(wrapper);
+        wrapper.eq("account", account);
+        Owner owner = ownerMapper.selectOne(wrapper);
+        if (owner == null) return null;
+
+        // BCrypt 匹配
+        if (encoder.matches(password, owner.getPassword())) {
+            return owner;
+        }
+        // 兼容旧明文密码（自动升级）
+        if (password.equals(owner.getPassword())) {
+            owner.setPassword(encoder.encode(password));
+            ownerMapper.updateById(owner);
+            return owner;
+        }
+        return null;
     }
 
     @Override
     public Admin adminLoginReturnId(String account, String password) {
-        Admin admin = adminLogin(account, password);
-        return admin; // 这个对象应该包含 id
+        return adminLogin(account, password);
     }
 
     @Override
     public Owner ownerLoginReturnId(String account, String password) {
-        Owner owner = ownerLogin(account, password);
-        return owner; // 这个对象应该包含 id
+        return ownerLogin(account, password);
     }
 
     @Override
     public int registerOwner(Owner owner) {
-        if (owner.getBuildingId() == null){
+        if (owner.getBuildingId() == null) {
             return -1;
         }
         Building building = buildingMapper.selectById(owner.getBuildingId());
-        if (building == null){
+        if (building == null) {
             return -2;
         }
         QueryWrapper<Owner> roomCheck = new QueryWrapper<>();
-        roomCheck.eq("building_id",owner.getBuildingId())
-                .eq("room_number",owner.getRoomNumber());
-        if (ownerMapper.selectCount(roomCheck) > 0){
+        roomCheck.eq("building_id", owner.getBuildingId())
+                .eq("room_number", owner.getRoomNumber());
+        if (ownerMapper.selectCount(roomCheck) > 0) {
             return -3;
         }
         QueryWrapper<Owner> wrapper = new QueryWrapper<>();
-        wrapper.eq("account",owner.getAccount());
-        if (ownerMapper.selectCount(wrapper) > 0){
+        wrapper.eq("account", owner.getAccount());
+        if (ownerMapper.selectCount(wrapper) > 0) {
             return 0;
         }
+
+        // BCrypt 加密密码再入库
+        owner.setPassword(encoder.encode(owner.getPassword()));
         return ownerMapper.insert(owner);
+    }
+
+    @Override
+    public int resetOwnerPassword(String account, String phone, String newPassword) {
+        QueryWrapper<Owner> wrapper = new QueryWrapper<>();
+        wrapper.eq("account", account).eq("phone", phone);
+        Owner owner = ownerMapper.selectOne(wrapper);
+        if (owner != null) {
+            // BCrypt 加密新密码
+            owner.setPassword(encoder.encode(newPassword));
+            return ownerMapper.updateById(owner);
+        }
+        return 0;
     }
 
     private List<String> generateAllRooms(int buildingNum, int floorNum, int roomNum) {
@@ -81,18 +127,5 @@ public class LoginServiceImpl implements LoginService {
             }
         }
         return rooms;
-    }
-
-    @Override
-    public int resetOwnerPassword(String account, String phone, String newPassword) {
-        QueryWrapper<Owner> wrapper = new QueryWrapper<>();
-        wrapper.eq("account",account).eq("phone",phone);
-        Owner owner = ownerMapper.selectOne(wrapper);
-        if (owner != null){
-            owner.setPassword(newPassword);
-            return ownerMapper.updateById(owner);
-        }
-        // 账号或手机不匹配
-        return 0;
     }
 }

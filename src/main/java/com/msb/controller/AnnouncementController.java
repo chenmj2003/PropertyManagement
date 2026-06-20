@@ -88,14 +88,10 @@ public class AnnouncementController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             announcementService.publish(announcement);
             // 公告变更 → 清除所有分页缓存，下次访问自动重建
             cacheService.clearAnnouncements();
             return Result.success("公告发布成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -110,15 +106,11 @@ public class AnnouncementController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             announcement.setId(id);
             announcementService.update(announcement);
             // 公告变更 → 清除所有分页缓存
             cacheService.clearAnnouncements();
             return Result.success("修改成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 
     /**
@@ -132,13 +124,9 @@ public class AnnouncementController {
         if (!"admin".equals(userType)) {
             return Result.fail(403, "权限不足");
         }
-        try {
             announcementService.delete(id);
             // 公告变更 → 清除所有分页缓存
             cacheService.clearAnnouncements();
             return Result.success("删除成功", null);
-        } catch (RuntimeException e) {
-            return Result.fail(e.getMessage());
-        }
     }
 }

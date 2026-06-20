@@ -170,7 +170,7 @@ const handleLogin = async () => {
   console.log('✅ Token 已保存到 sessionStorage 和 cookie')
 }
       
-      ElMessage.success(data.message || '登录成功')
+      ElMessage.success(data.message || data.msg || '登录成功')
       
       // ✅ 修复 2：使用具体路径跳转
       if (userType.value === 'admin') {
@@ -179,10 +179,10 @@ const handleLogin = async () => {
         router.push('/owner/home')     // 直接跳转到具体页面
       }
     } else {
-      ElMessage.error(data.message)
+      ElMessage.error(data.message || data.msg)
     }
   } catch (error) {
-    console.error('登录错误:', error)  // ✅ 添加错误日志
+    console.error('登录错误:', error)
     ElMessage.error('网络错误')
   } finally {
     loginLoading.value = false
@@ -236,7 +236,7 @@ const handleRegister = async () => {
   try {
     const { data } = await axios.post('/api/register', registerForm)
     if (data.code === 200) {
-      ElMessage.success(data.message)
+      ElMessage.success(data.message || data.msg)
       mode.value = 'login'
       // 清空表单
       Object.keys(registerForm).forEach(key => {
@@ -246,7 +246,7 @@ const handleRegister = async () => {
   registerForm.buildingId = undefined
   registerForm.roomNumber = ''
     } else {
-      ElMessage.error(data.message)
+      ElMessage.error(data.message || data.msg)
     }
   } catch (error) {
     ElMessage.error('网络错误')
@@ -285,10 +285,10 @@ const handleReset = async () => {
   try {
     const { data } = await axios.post('/api/resetPwd', resetForm)
     if (data.code === 200) {
-      ElMessage.success(data.message)
+      ElMessage.success(data.message || data.msg)
       mode.value = 'login'
     } else {
-      ElMessage.error(data.message)
+      ElMessage.error(data.message || data.msg)
     }
   } catch (error) {
     ElMessage.error('网络错误')

@@ -7,6 +7,7 @@ import com.msb.pojo.Vehicle;
 import com.msb.service.VehicleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.msb.common.BusinessException;
 
 import java.util.List;
 @Service
@@ -41,7 +42,7 @@ public class VehicleServiceImpl implements VehicleService {
         // 校验车辆归属
         Vehicle vehicleExit = vehicleMapper.selectByIdAndOwner(vehicle.getId(), ownerId);
         if (vehicleExit == null){
-            throw new RuntimeException("您无权操控此车辆");
+            throw new BusinessException("您无权操控此车辆");
         }
         vehicle.setOwnerId(ownerId);
         Owner owner = ownerMapper.selectById(ownerId);
@@ -55,7 +56,7 @@ public class VehicleServiceImpl implements VehicleService {
     public void deleteVehicle(Integer vehicleId, Integer ownerId) {
         int i = vehicleMapper.deleteByIdAndOwner(vehicleId, ownerId);
         if (i == 0){
-            throw new RuntimeException("您无权操作此车辆");
+            throw new BusinessException("您无权操作此车辆");
         }
     }
 
